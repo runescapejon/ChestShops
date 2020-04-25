@@ -357,14 +357,18 @@ public class ChestShops {
 												player.getLocation().getPosition(), 1);
 									}
 									// it was bugging out on >= very strange but whatever...
+
 									if (bal.intValue() == price.intValue() || bal.intValue() > price.intValue()) {
-										if (!player.getInventory().canFit(stack)) {
+										//this should prevent any other issues like scamming when a player cannot obtain the item even if the item cannot fit but have the inventory clear
+										//like if they have clear inventory but trying to purchase something that is OVER 9000 .-.
+										ItemStack is = ItemStack.builder().from(stack).quantity(amount).build();
+										if (!player.getInventory().canFit(is)) {
 											player.sendMessage(TextSerializers.FORMATTING_CODE
 													.deserialize(Configuration.purchaseroom));
 											player.playSound(SoundTypes.BLOCK_ANVIL_PLACE,
 													player.getLocation().getPosition(), 1);
 										}
-										if (player.getInventory().canFit(stack)) {
+										if (player.getInventory().canFit(is)) {
 											if (shop.getContents().isEmpty()) {
 												player.sendMessage(TextSerializers.FORMATTING_CODE
 														.deserialize(Configuration.empty));				
