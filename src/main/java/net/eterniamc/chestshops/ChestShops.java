@@ -362,20 +362,17 @@ public class ChestShops {
 										//like if they have clear inventory but trying to purchase something that is OVER 9000 .-.
 										ItemStack is = ItemStack.builder().from(stack).quantity(amount).build();
 										if (!player.getInventory().canFit(is)) {
-											System.out.println("t");
 											player.sendMessage(TextSerializers.FORMATTING_CODE
 													.deserialize(Configuration.purchaseroom));
 											player.playSound(SoundTypes.BLOCK_ANVIL_PLACE,
 													player.getLocation().getPosition(), 1);
 										}
 										if (player.getInventory().canFit(is)) {
-											System.out.println("t");
 											if (shop.getContents().isEmpty()) {
 												player.sendMessage(TextSerializers.FORMATTING_CODE
 														.deserialize(Configuration.empty));				
 												}
 										if (!shop.getContents().isEmpty()) {
-											System.out.println("t");
 											if (withdraw(player, amount * shop.getPrice())) {
 												deposit(getUser(shop.getOwner()), amount * shop.getPrice());
 												Set<ItemStack> withdrawn = shop.withdraw(amount);
