@@ -1,1 +1,1 @@
-# ChestShop is created by Justin and has he requested the changes to be shared to him, I'd only made changes to fit my server needs. If you found any bugs i am willy to fix them for you but keep in mind i do not have permission to distribute the compiled jar, you'll have to do it yourself.
+# ChestShop is created by Justin and has he requested the changes to be shared to him on github. Since I do have permission from him to maintain this fork. Please report on github issues if you found a bug and I'll fix them asap thank you. 
