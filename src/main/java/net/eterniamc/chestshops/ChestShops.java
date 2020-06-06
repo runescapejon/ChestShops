@@ -3,8 +3,12 @@ package net.eterniamc.chestshops;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -198,19 +202,21 @@ public class ChestShops {
 					Optional<TileEntity> tile = player.getWorld().getTileEntity(transaction.getDefault().getPosition());
 					if (tile.isPresent() && tile.get() instanceof Chest) {
 						Chest c = (Chest) tile.get();
-						//I figure without having some weird crash that players can have
-						//a double chest to store items and to sell on another side of the chest or have fun with double chestshop xD..
-						//sort of a feature idk.. it seem a good idea and good feedback on it, feel free to fix this.. 
-		/*		 	if (c.getConnectedChests().size() == 1) {
- 						BlockType type = transaction.getDefault().getState().getType() == BlockTypes.CHEST
-								 	? BlockTypes.TRAPPED_CHEST
-							 		: BlockTypes.CHEST;
- 		 				c.getLocation().setBlock(type.getDefaultState().with(Keys.DIRECTION,
-		  					 	transaction.getDefault().getState().get(Keys.DIRECTION).orElse(Direction.NONE))
-				 				 	.get());
-					 		tile = player.getWorld().getTileEntity(transaction.getDefault().getPosition());
-					 	c = (Chest) tile.get();
-					 	}*/
+						// I figure without having some weird crash that players can have
+						// a double chest to store items and to sell on another side of the chest or
+						// have fun with double chestshop xD..
+						// sort of a feature idk.. it seem a good idea and good feedback on it, feel
+						// free to fix this..
+						/*
+						 * if (c.getConnectedChests().size() == 1) { BlockType type =
+						 * transaction.getDefault().getState().getType() == BlockTypes.CHEST ?
+						 * BlockTypes.TRAPPED_CHEST : BlockTypes.CHEST;
+						 * c.getLocation().setBlock(type.getDefaultState().with(Keys.DIRECTION,
+						 * transaction.getDefault().getState().get(Keys.DIRECTION).orElse(Direction.NONE
+						 * )) .get()); tile =
+						 * player.getWorld().getTileEntity(transaction.getDefault().getPosition()); c =
+						 * (Chest) tile.get(); }
+						 */
 						Chest chest = c; // lambdas >:(
 						sendMessage(player, Configuration.PriceMsg);
 						chatGuis.put(player.getUniqueId(), text -> {
@@ -251,23 +257,36 @@ public class ChestShops {
 					event.setCancelled(true);
 				} else {
 					if (shop.getOwner().equals(((Player) event.getSource()).getUniqueId())) {
-						ItemStack snapshot = shop.getContents().iterator().next();
-						if (!player.getInventory().canFit(snapshot)) {
-							event.setCancelled(true);
-							player.sendMessage((Text
-									.of(TextSerializers.FORMATTING_CODE.deserialize(Configuration.availableitems))));
-							player.playSound(SoundTypes.BLOCK_ANVIL_PLACE, player.getLocation().getPosition(), 1);
-						}
+						// ItemStack snapshot = shop.getContents().iterator().next();
+						// this line above had an issue where if element next return to nothing the
+						// hologram "empty" is staying. This is how player break an empty chestshop and
+						// yet still active chestshop but without the chest. Below should fix that behavior 
+						List<Set<ItemStack>> list = Arrays.asList(shop.getContents());
+						Iterator<Set<ItemStack>> iter = list.iterator();
+						while (iter.hasNext()) {
+							Set<ItemStack> snapshot = iter.next();
+							if (snapshot.isEmpty()) {
+								shops.remove((transaction.getDefault()).getPosition());
+								shop.close();
+								return;
+							}
+							//making sure that empty element doesn't return an error..
+							if (!player.getInventory().canFit(snapshot.iterator().next()) && !snapshot.isEmpty()) {
+								event.setCancelled(true);
+								player.sendMessage((Text.of(
+										TextSerializers.FORMATTING_CODE.deserialize(Configuration.availableitems))));
+								player.playSound(SoundTypes.BLOCK_ANVIL_PLACE, player.getLocation().getPosition(), 1);
+							}
+							if (player.getInventory().canFit(snapshot.iterator().next())) {
+								shops.remove((transaction.getDefault()).getPosition());
+								shop.close();
 
-						if (player.getInventory().canFit(snapshot)) {
-							shops.remove((transaction.getDefault()).getPosition());
-							shop.close();
-
-							Sponge.getServer().getPlayer(shop.getOwner()).ifPresent(player1 -> {
-								Sponge.getCommandManager().process((CommandSource) Sponge.getServer().getConsole(),
-										"chestshopgive " + player1.getName() + " 1");
-								shop.withdraw(shop.sumContents()).forEach(player1.getInventory()::offer);
-							});
+								Sponge.getServer().getPlayer(shop.getOwner()).ifPresent(player1 -> {
+									Sponge.getCommandManager().process((CommandSource) Sponge.getServer().getConsole(),
+											"chestshopgive " + player1.getName() + " 1");
+									shop.withdraw(shop.sumContents()).forEach(player1.getInventory()::offer);
+								});
+							}
 						}
 					}
 				}
@@ -336,76 +355,78 @@ public class ChestShops {
 									player.setItemInHand(HandTypes.MAIN_HAND, ItemStack.empty());
 								}
 							})).build());
-			} else if (shop.isAdmin() || shop.sumContents() > 1) {
-				sendMessage(player, Configuration.buyamount);
-				chatGuis.put(player.getUniqueId(), text -> {
-					int amount = Integer.parseInt(text.toPlain().replaceAll("[^0-9]", ""));
-					Optional<UniqueAccount> acc = es.getOrCreateAccount(player.getUniqueId());
-					if (!shop.isAdmin() && shop.sumContents() < amount) {
-						sendMessage(player, Configuration.notenoughtitems);
-					} else {
-						player.sendMessage(Text.builder()
-								.append(TextSerializers.FORMATTING_CODE.deserialize(Configuration.purchase
-										.replace("%c%", String.valueOf(amount * shop.getPrice()))))
-								.onClick(TextActions.executeCallback(src -> {
-									BigDecimal price = new BigDecimal(shop.getPrice());
-									BigDecimal bal = acc.get().getBalance(es.getDefaultCurrency());
-									if (bal.compareTo(price) < 0) {
-										player.sendMessage(TextSerializers.FORMATTING_CODE
-												.deserialize(Configuration.notenoughmoney));
-										player.playSound(SoundTypes.BLOCK_ANVIL_PLACE,
-												player.getLocation().getPosition(), 1);
-										return;
-									}
-									if (bal.compareTo(price)> 0) {
-										//this should prevent any other issues like scamming when a player cannot obtain the item even if the item cannot fit but have the inventory clear
-										//like if they have clear inventory but trying to purchase something that is OVER 9000 .-.
-										ItemStack is = ItemStack.builder().from(stack).quantity(amount).build();
-										if (!player.getInventory().canFit(is)) {
+				} else if (shop.isAdmin() || shop.sumContents() > 1) {
+					sendMessage(player, Configuration.buyamount);
+					chatGuis.put(player.getUniqueId(), text -> {
+						int amount = Integer.parseInt(text.toPlain().replaceAll("[^0-9]", ""));
+						Optional<UniqueAccount> acc = es.getOrCreateAccount(player.getUniqueId());
+						if (!shop.isAdmin() && shop.sumContents() < amount) {
+							sendMessage(player, Configuration.notenoughtitems);
+						} else {
+							player.sendMessage(Text.builder()
+									.append(TextSerializers.FORMATTING_CODE.deserialize(Configuration.purchase
+											.replace("%c%", String.valueOf(amount * shop.getPrice()))))
+									.onClick(TextActions.executeCallback(src -> {
+										BigDecimal price = new BigDecimal(shop.getPrice());
+										BigDecimal bal = acc.get().getBalance(es.getDefaultCurrency());
+										if (bal.compareTo(price) < 0) {
 											player.sendMessage(TextSerializers.FORMATTING_CODE
-													.deserialize(Configuration.purchaseroom));
+													.deserialize(Configuration.notenoughmoney));
 											player.playSound(SoundTypes.BLOCK_ANVIL_PLACE,
 													player.getLocation().getPosition(), 1);
+											return;
 										}
-										if (player.getInventory().canFit(is)) {
-											if (shop.getContents().isEmpty()) {
+										if (bal.compareTo(price) > 0) {
+											// this should prevent any other issues like scamming when a player cannot
+											// obtain the item even if the item cannot fit but have the inventory clear
+											// like if they have clear inventory but trying to purchase something that
+											// is OVER 9000 .-.
+											ItemStack is = ItemStack.builder().from(stack).quantity(amount).build();
+											if (!player.getInventory().canFit(is)) {
 												player.sendMessage(TextSerializers.FORMATTING_CODE
-														.deserialize(Configuration.empty));				
+														.deserialize(Configuration.purchaseroom));
+												player.playSound(SoundTypes.BLOCK_ANVIL_PLACE,
+														player.getLocation().getPosition(), 1);
+											}
+											if (player.getInventory().canFit(is)) {
+												if (shop.getContents().isEmpty()) {
+													player.sendMessage(TextSerializers.FORMATTING_CODE
+															.deserialize(Configuration.empty));
 												}
-										if (!shop.getContents().isEmpty()) {
-											if (withdraw(player, amount * shop.getPrice())) {
-												deposit(getUser(shop.getOwner()), amount * shop.getPrice());
-												Set<ItemStack> withdrawn = shop.withdraw(amount);
-												withdrawn = shop.withdraw(amount);
-												withdrawn.forEach(player.getInventory()::offer);
+												if (!shop.getContents().isEmpty()) {
+													if (withdraw(player, amount * shop.getPrice())) {
+														deposit(getUser(shop.getOwner()), amount * shop.getPrice());
+														Set<ItemStack> withdrawn = shop.withdraw(amount);
+														withdrawn = shop.withdraw(amount);
+														withdrawn.forEach(player.getInventory()::offer);
+													}
+												}
 											}
 										}
-										}
-									}
-								})).build());
-					}
-				});
-			}
-		} else if (shop.sumContents() == 1) {
-
-			player.sendMessage(Text.builder()
-					.append(TextSerializers.FORMATTING_CODE
-							.deserialize(Configuration.cost.replace("%c%", String.valueOf(shop.getPrice()))))
-					.onClick(TextActions.executeCallback(src -> {
-				if (shop.getContents().isEmpty()) {
-					player.sendMessage(TextSerializers.FORMATTING_CODE
-							.deserialize(Configuration.empty));
+									})).build());
+						}
+					});
 				}
-				if (!shop.getContents().isEmpty()) {
-						if (withdraw(player, shop.getPrice())) {
-							deposit(getUser(shop.getOwner()), shop.getPrice());
-							Set<ItemStack> withdrawn = shop.withdraw(1);
-							withdrawn.forEach(player.getInventory()::offer);
-						}}
-					})).build());
-		} else {
-			sendMessage(player, Configuration.empty);
-		}
+			} else if (shop.sumContents() == 1) {
+
+				player.sendMessage(Text.builder()
+						.append(TextSerializers.FORMATTING_CODE
+								.deserialize(Configuration.cost.replace("%c%", String.valueOf(shop.getPrice()))))
+						.onClick(TextActions.executeCallback(src -> {
+							if (shop.getContents().isEmpty()) {
+								player.sendMessage(TextSerializers.FORMATTING_CODE.deserialize(Configuration.empty));
+							}
+							if (!shop.getContents().isEmpty()) {
+								if (withdraw(player, shop.getPrice())) {
+									deposit(getUser(shop.getOwner()), shop.getPrice());
+									Set<ItemStack> withdrawn = shop.withdraw(1);
+									withdrawn.forEach(player.getInventory()::offer);
+								}
+							}
+						})).build());
+			} else {
+				sendMessage(player, Configuration.empty);
+			}
 		}
 	}
 
