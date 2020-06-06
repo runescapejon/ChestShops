@@ -1,1 +1,1 @@
-# ChestShop is created by Justin and has he requested the changes to be shared to him on github. Since I do have permission from him to maintain this fork. Please report on github issues if you found a bug and I'll fix them asap thank you. 
+# ChestShop is created by Justin and has he requested the changes to be shared to him on github. Also, I do have permission from him to maintain this fork. Please report on github issues if you found a bug and I'll fix them asap thank you. 
