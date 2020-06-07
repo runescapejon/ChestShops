@@ -355,7 +355,7 @@ public class ChestShops {
 									player.setItemInHand(HandTypes.MAIN_HAND, ItemStack.empty());
 								}
 							})).build());
-				} else if (shop.isAdmin() || shop.sumContents() > 1) {
+				} else if (shop.isAdmin() || shop.sumContents() >= 1) {
 					sendMessage(player, Configuration.buyamount);
 					chatGuis.put(player.getUniqueId(), text -> {
 						int amount = Integer.parseInt(text.toPlain().replaceAll("[^0-9]", ""));
