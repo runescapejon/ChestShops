@@ -2,6 +2,8 @@ package net.eterniamc.chestshops;
 
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.block.tileentity.carrier.Chest;
 import org.spongepowered.api.data.key.Keys;
@@ -231,16 +233,20 @@ public class ChestShop {
 		}
 		for (ItemStack content : contents) {
 			if (amount < content.getQuantity()) {
-				final ItemStack copy = content.copy();
+			    ItemStack copy = content.copy();
 				copy.setQuantity(amount);
 				content.setQuantity(content.getQuantity() - copy.getQuantity());
 				if (content.getQuantity() <= 0) {
 					contents.remove(content);
+					contents.clear();
 				}
 				set.add(copy);
 				break;
 			}
-			contents.remove(content);
+			//I'd fix the issue with withdraw 1x disappear but it leads to an exploit.. that they can confirm twice by click it two times..
+			//Here what i did here by creating a delay in milli-seconds that remove contents properly.
+
+			Sponge.getScheduler().createTaskBuilder().delay((long) 0.1, TimeUnit.MILLISECONDS).execute(src -> contents.remove(content)).submit(ChestShops.plugin);
 			set.add(content);
 			amount -= content.getQuantity();
 		}

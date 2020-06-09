@@ -89,7 +89,7 @@ public class ChestShops {
 	private static Map<Vector3i, ChestShop> shops = Maps.newConcurrentMap();
 	private Map<UUID, Consumer<Text>> chatGuis = Maps.newHashMap();
 	private EconomyService es;
-	private Object plugin;
+	static Object plugin;
 
 	private File configDirectory;
 	@SuppressWarnings("unused")
@@ -166,7 +166,7 @@ public class ChestShops {
 			Task.builder().execute(() -> {
 				close.forEach(ChestShop::close);
 				open.forEach(ChestShop::open);
-			}).submit(this.plugin);
+			}).submit(ChestShops.plugin);
 		}, 0L, 250, TimeUnit.MILLISECONDS);
 		Task.builder().interval(5, TimeUnit.MINUTES).execute(this::save).submit(this);
 
@@ -345,17 +345,19 @@ public class ChestShops {
 								.orElse(false)) {
 					Optional<ItemStack> held = player.getItemInHand(HandTypes.MAIN_HAND);
 					double amount = shop.getBuyPrice() * held.get().getQuantity();
+					ItemStack is = shop.getContents().iterator().next();
 					player.sendMessage(Text.builder()
 							.append(TextSerializers.FORMATTING_CODE
 									.deserialize(Configuration.confirm.replace("%amount%", String.valueOf(amount))))
 							.onClick(TextActions.executeCallback(src -> {
 								if (withdraw(getUser(shop.getOwner()), amount)) {
 									deposit(player, amount);
-									shop.add(held.get());
+									shop.add(held.get());  
 									player.setItemInHand(HandTypes.MAIN_HAND, ItemStack.empty());
 								}
 							})).build());
-				} else if (shop.isAdmin() || shop.sumContents() >= 1) {
+				} else if (shop.isAdmin() || shop.sumContents() >= 0) {
+					//>=0 is allowing players to have a set of 1 item in chestshop. Essentially sort of fixing the issue with 1x withdraw disappear
 					sendMessage(player, Configuration.buyamount);
 					chatGuis.put(player.getUniqueId(), text -> {
 						int amount = Integer.parseInt(text.toPlain().replaceAll("[^0-9]", ""));
@@ -394,12 +396,16 @@ public class ChestShops {
 															.deserialize(Configuration.empty));
 												}
 												if (!shop.getContents().isEmpty()) {
+												 
+											 
 													if (withdraw(player, amount * shop.getPrice())) {
+													 
 														deposit(getUser(shop.getOwner()), amount * shop.getPrice());
 														Set<ItemStack> withdrawn = shop.withdraw(amount);
 														withdrawn = shop.withdraw(amount);
 														withdrawn.forEach(player.getInventory()::offer);
 													}
+												 
 												}
 											}
 										}
@@ -408,7 +414,7 @@ public class ChestShops {
 					});
 				}
 			} else if (shop.sumContents() == 1) {
-
+			 
 				player.sendMessage(Text.builder()
 						.append(TextSerializers.FORMATTING_CODE
 								.deserialize(Configuration.cost.replace("%c%", String.valueOf(shop.getPrice()))))
@@ -417,6 +423,7 @@ public class ChestShops {
 								player.sendMessage(TextSerializers.FORMATTING_CODE.deserialize(Configuration.empty));
 							}
 							if (!shop.getContents().isEmpty()) {
+							 
 								if (withdraw(player, shop.getPrice())) {
 									deposit(getUser(shop.getOwner()), shop.getPrice());
 									Set<ItemStack> withdrawn = shop.withdraw(1);
