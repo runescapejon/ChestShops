@@ -2,8 +2,8 @@ This is how to use the chestshop it's easy and design to be user friendly. Simpl
 
 | Command | information | permission |
 | :---         |     :---:      |          ---: |
-| /chestshop <quantity>  | Allow you to give yourself a chestshop with the optional quantity     | chestshop.command    |
-| /chestshopgive <quantity>   | Give the amount you want to another player   | chestshop.give      |
+| /chestshop (quantity) | Allow you to give yourself a chestshop with the optional quantity     | chestshop.command    |
+| /chestshopgive (quantity)   | Give the amount you want to another player   | chestshop.give      |
 | n/a   | Give the ability to perform admin chestshop   | chestshop.admin      |
 
 ChestShop is created by Justin and has he requested the changes to be shared to him on github. Also, I do have permission from him to maintain this fork. Please report on github issues if you found a bug and I'll fix them asap thank you. 
