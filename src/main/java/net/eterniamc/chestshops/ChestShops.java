@@ -58,6 +58,7 @@ import org.spongepowered.api.service.user.UserStorageService;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.action.TextActions;
 import org.spongepowered.api.text.channel.MessageReceiver;
+import org.spongepowered.api.text.format.TextColors;
 import org.spongepowered.api.text.serializer.TextSerializers;
 import org.spongepowered.api.util.Tristate;
 import org.spongepowered.api.util.blockray.BlockRay;
@@ -382,6 +383,7 @@ public class ChestShops {
 											// obtain the item even if the item cannot fit but have the inventory clear
 											// like if they have clear inventory but trying to purchase something that
 											// is OVER 9000 .-.
+											if (shop.sumContents() >= amount) {
 											ItemStack is = ItemStack.builder().from(stack).quantity(amount).build();
 											if (!player.getInventory().canFit(is)) {
 												player.sendMessage(TextSerializers.FORMATTING_CODE
@@ -404,7 +406,7 @@ public class ChestShops {
 														withdrawn.forEach(player.getInventory()::offer);
 													}
 												 
-												}
+												}}
 											}
 										}
 									})).build());

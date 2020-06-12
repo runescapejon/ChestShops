@@ -242,12 +242,14 @@ public class ChestShop {
 		// Lastly DualSpiral mention that I had two withdraw in another class used to distribute the withdraw to player inventory. That it could be an issue.
 		// That I even tested this and saw that i was an actual issue. It started on withdraw twice. Overall learned from this and thank everyone..
 		for (ItemStack content : contents) {
+			if (amount <= content.getQuantity()) {
 			    ItemStack copy = content.copy();
 				copy.setQuantity(amount);
 				content.setQuantity(content.getQuantity() - copy.getQuantity());
 			set.add(copy);
 			amount -= content.getQuantity();
 			break;
+		}
 		}
 		if (sumContents() <= 0) {
 			contents.clear();
