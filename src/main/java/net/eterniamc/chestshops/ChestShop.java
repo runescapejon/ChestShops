@@ -44,22 +44,25 @@ public class ChestShop {
 
 	@SuppressWarnings("unchecked")
 	public ChestShop(Chest chest, UUID owner, double price) {
-		this.contents = (Set<ItemStack>)(Object)Sets.newConcurrentHashSet();
+		this.contents = (Set<ItemStack>) (Object) Sets.newConcurrentHashSet();
 		this.chest = chest;
 		this.owner = owner;
 		location = (Location<World>) chest.getLocation();
 		this.price = price;
 	}
 
-    public static ChestShop readFromNbt(  NBTTagCompound nbt) {
-          ChestShop shop = new ChestShop( (Chest) Sponge.getServer().getWorld(nbt.getUniqueId("world")).get().getTileEntity(nbt.getInteger("x"), nbt.getInteger("y"), nbt.getInteger("z")).orElse(null), nbt.getUniqueId("owner"), nbt.getDouble("price"));
-          NBTTagList stacks = nbt.getTagList("stacks", 10);
-        for (  NBTBase stack : stacks) {
-            shop.contents.add((ItemStack)(Object)new net.minecraft.item.ItemStack((NBTTagCompound)stack));
-        }
-        shop.setAdmin(nbt.hasKey("admin") && nbt.getBoolean("admin"));
-        return shop;
-    }
+	public static ChestShop readFromNbt(NBTTagCompound nbt) {
+		ChestShop shop = new ChestShop(
+				(Chest) Sponge.getServer().getWorld(nbt.getUniqueId("world")).get()
+						.getTileEntity(nbt.getInteger("x"), nbt.getInteger("y"), nbt.getInteger("z")).orElse(null),
+				nbt.getUniqueId("owner"), nbt.getDouble("price"));
+		NBTTagList stacks = nbt.getTagList("stacks", 10);
+		for (NBTBase stack : stacks) {
+			shop.contents.add((ItemStack) (Object) new net.minecraft.item.ItemStack((NBTTagCompound) stack));
+		}
+		shop.setAdmin(nbt.hasKey("admin") && nbt.getBoolean("admin"));
+		return shop;
+	}
 
 	public NBTTagCompound writeToNbt() {
 		NBTTagCompound nbt = new NBTTagCompound();
@@ -80,10 +83,11 @@ public class ChestShop {
 
 	public void open() {
 		TileEntityChest entityChest = (TileEntityChest) chest;
-        if (!open)
-            entityChest.getWorld().addBlockEvent(new BlockPos(location.getX(), location.getY(), location.getZ()), entityChest.getBlockType(), 1, 1);
-        open = true;
-        
+		if (!open)
+			entityChest.getWorld().addBlockEvent(new BlockPos(location.getX(), location.getY(), location.getZ()),
+					entityChest.getBlockType(), 1, 1);
+		open = true;
+
 		if (title == null) {
 			location.getExtent()
 					.getNearbyEntities(location.getPosition().add(0.5, (buyPrice > 0.0) ? 1.75 : 1.5, 0.5), 0.1)
@@ -216,6 +220,7 @@ public class ChestShop {
 		contents.add(stack);
 	}
 
+	
 	public Set<ItemStack> withdraw(int amount) {
 		Set<ItemStack> set = Sets.newHashSet();
 		if (admin) {
@@ -231,24 +236,18 @@ public class ChestShop {
 			}
 			return set;
 		}
+		//here below was the most trouble some discuss with DualSpiral/Rynelf/node on telling me what was wrong. 
+		// That there was a possible ConcurrentModificationException but it's will never get hit due to how one of the statement was.
+		// Then from there i had figure out the root of the cause set.add(copy and content) was in there causing some weird issues.
+		// Lastly DualSpiral mention that I had two withdraw in another class used to distribute the withdraw to player inventory. That it could be an issue.
+		// That I even tested this and saw that i was an actual issue. It started on withdraw twice. Overall learned from this and thank everyone..
 		for (ItemStack content : contents) {
-			if (amount < content.getQuantity()) {
 			    ItemStack copy = content.copy();
 				copy.setQuantity(amount);
 				content.setQuantity(content.getQuantity() - copy.getQuantity());
-				if (content.getQuantity() <= 0) {
-					contents.remove(content);
-					contents.clear();
-				}
-				set.add(copy);
-				break;
-			}
-			//I'd fix the issue with withdraw 1x disappear but it leads to an exploit.. that they can confirm twice by click it two times..
-			//Here what i did here by creating a delay in milli-seconds that remove contents properly.
-
-			Sponge.getScheduler().createTaskBuilder().delay((long) 0.1, TimeUnit.MILLISECONDS).execute(src -> contents.remove(content)).submit(ChestShops.plugin);
-			set.add(content);
+			set.add(copy);
 			amount -= content.getQuantity();
+			break;
 		}
 		if (sumContents() <= 0) {
 			contents.clear();
@@ -256,7 +255,7 @@ public class ChestShop {
 		update();
 		return set;
 	}
-
+	
 	public Location<World> getLocation() {
 		return location;
 	}

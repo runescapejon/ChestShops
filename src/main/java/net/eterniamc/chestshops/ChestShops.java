@@ -345,7 +345,6 @@ public class ChestShops {
 								.orElse(false)) {
 					Optional<ItemStack> held = player.getItemInHand(HandTypes.MAIN_HAND);
 					double amount = shop.getBuyPrice() * held.get().getQuantity();
-					ItemStack is = shop.getContents().iterator().next();
 					player.sendMessage(Text.builder()
 							.append(TextSerializers.FORMATTING_CODE
 									.deserialize(Configuration.confirm.replace("%amount%", String.valueOf(amount))))
@@ -402,7 +401,6 @@ public class ChestShops {
 													 
 														deposit(getUser(shop.getOwner()), amount * shop.getPrice());
 														Set<ItemStack> withdrawn = shop.withdraw(amount);
-														withdrawn = shop.withdraw(amount);
 														withdrawn.forEach(player.getInventory()::offer);
 													}
 												 
