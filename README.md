@@ -1,9 +1,10 @@
-This is how to use the chestshop it's easy and design to be user friendly. Simply type /chestshop and place it anywhere. Once you place it mention the price you want your item to be. To set the price all you have to do is just mention it in minecraft chat that is all. After mentioning your price take any item you wish to be sell to others by right clicking the item into the chestshop that you placed, you can store any infinite quantity in the chestshop. There is an Admin feature that allow administration of the server to have a chestshop with unlimited quantity without having to restore the lost amount. 
+This is how to use the Chestshops it's easy and designed to be user friendly. Simply type /chestshop and place it anywhere. Once you place it mention the price you want your item to be. To set the price, all you have to do is just mention it in the Minecraft chat. After mentioning your price take any item you wish to sell to other players and right click the item onto the Chestshop that you placed, you can store an infinite quantity of items in the Chestshop. There is an Admin feature that allows administration of the server to have a Chestshop with unlimited quantity without having to restore the purchased items. 
 
-| Command | information | permission |
+| Command | Information | Permission |
 | :---         |     :---:      |          ---: |
-| /chestshop (quantity) | Allow you to give yourself a chestshop with the optional quantity     | chestshop.command    |
+| /chestshop (quantity)  | Allow you to give yourself a Chestshop with the optional quantity.     | chestshop.command    |
 | /chestshopgive (quantity)   | Give the amount you want to another player   | chestshop.give      |
-| n/a   | Give the ability to perform admin chestshop   | chestshop.admin      |
+| n/a   | Give the ability to perform Admin Chestshops   | chestshop.admin
 
-ChestShop is created by Justin and has he requested the changes to be shared to him on github. Also, I do have permission from him to maintain this fork. Please report on github issues if you found a bug and I'll fix them asap thank you. 
+
+ChestShop was created by Justin and he has requested the changes to be shared with him on Github. Additionally, I do have permission from him to maintain this fork. Please report all issues and bugs found on Github and I'll fix them ASAP thank you. 
