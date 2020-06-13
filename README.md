@@ -6,5 +6,8 @@ This is how to use the Chestshops it's easy and designed to be user friendly. Si
 | /chestshopgive (quantity)   | Give the amount you want to another player   | chestshop.give      |
 | n/a   | Give the ability to perform Admin Chestshops   | chestshop.admin
 
+## Support this plugin?
+I don't acccept any donations but thank you for considering it. All my developments are free open sources. If you enjoy this project please consider hitting that star on this github page that all i ask. This tell me that there are users who are enjoying and utilizing it thank you.
 
+## Credit
 ChestShop was created by Justin and he has requested the changes to be shared with him on Github. Additionally, I do have permission from him to maintain this fork. Please report all issues and bugs found on Github and I'll fix them ASAP thank you. 
