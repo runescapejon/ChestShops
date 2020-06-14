@@ -1,9 +1,18 @@
 package net.eterniamc.chestshops;
 
+import java.math.BigDecimal;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.function.IntBinaryOperator;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
+import org.codehaus.plexus.util.CollectionUtils;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.block.tileentity.carrier.Chest;
 import org.spongepowered.api.data.key.Keys;
@@ -26,6 +35,7 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.tileentity.TileEntityChest;
 import net.minecraft.util.math.BlockPos;
+import scala.collection.mutable.FlatHashTable.Contents;
 
 public class ChestShop {
 
@@ -236,20 +246,23 @@ public class ChestShop {
 			}
 			return set;
 		}
-		//here below was the most trouble some discuss with DualSpiral/Rynelf/node on telling me what was wrong. 
-		// That there was a possible ConcurrentModificationException but it's will never get hit due to how one of the statement was.
-		// Then from there i had figure out the root of the cause set.add(copy and content) was in there causing some weird issues.
-		// Lastly DualSpiral mention that I had two withdraw in another class used to distribute the withdraw to player inventory. That it could be an issue.
-		// That I even tested this and saw that i was an actual issue. It started on withdraw twice. Overall learned from this and thank everyone..
 		for (ItemStack content : contents) {
-			if (amount <= content.getQuantity()) {
-			    ItemStack copy = content.copy();
-				copy.setQuantity(amount);
-				content.setQuantity(content.getQuantity() - copy.getQuantity());
-			set.add(copy);
-			amount -= content.getQuantity();
-			break;
-		}
+		       Iterator<ItemStack> iterator = contents.iterator();
+		        while (iterator.hasNext() && amount > 0) {
+		            ItemStack content1 = iterator.next();
+		            if (content1.getQuantity() > amount) {
+		                ItemStack copy = content1.copy();
+		                copy.setQuantity(amount);
+		                set.add(copy);
+		                content1.setQuantity(content1.getQuantity() - amount);
+		                amount = 0;
+		            } else {
+		                amount -= content1.getQuantity();
+		                set.add(content1.copy());
+		                iterator.remove();
+		            }
+		        }
+				break;
 		}
 		if (sumContents() <= 0) {
 			contents.clear();
