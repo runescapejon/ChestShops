@@ -3,12 +3,12 @@ package net.eterniamc.chestshops;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -26,10 +26,13 @@ import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.GenericArguments;
 import org.spongepowered.api.command.spec.CommandSpec;
 import org.spongepowered.api.config.ConfigDir;
+import org.spongepowered.api.data.DataContainer;
+import org.spongepowered.api.data.DataQuery;
 import org.spongepowered.api.data.Transaction;
 import org.spongepowered.api.data.key.Keys;
 import org.spongepowered.api.data.type.HandTypes;
 import org.spongepowered.api.effect.sound.SoundTypes;
+import org.spongepowered.api.entity.Entity;
 import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.entity.living.player.User;
 import org.spongepowered.api.event.Listener;
@@ -38,12 +41,18 @@ import org.spongepowered.api.event.block.ChangeBlockEvent;
 import org.spongepowered.api.event.block.InteractBlockEvent;
 import org.spongepowered.api.event.cause.Cause;
 import org.spongepowered.api.event.cause.EventContext;
+import org.spongepowered.api.event.cause.EventContextKey;
+import org.spongepowered.api.event.cause.EventContextKeys;
+import org.spongepowered.api.event.entity.SpawnEntityEvent;
+import org.spongepowered.api.event.filter.Getter;
 import org.spongepowered.api.event.filter.cause.First;
 import org.spongepowered.api.event.filter.cause.Root;
+import org.spongepowered.api.event.filter.type.Include;
 import org.spongepowered.api.event.game.state.GamePreInitializationEvent;
 import org.spongepowered.api.event.game.state.GameStartedServerEvent;
 import org.spongepowered.api.event.game.state.GameStoppingServerEvent;
 import org.spongepowered.api.event.item.inventory.ChangeInventoryEvent;
+import org.spongepowered.api.event.item.inventory.DropItemEvent;
 import org.spongepowered.api.event.message.MessageChannelEvent;
 import org.spongepowered.api.event.service.ChangeServiceProviderEvent;
 import org.spongepowered.api.item.ItemTypes;
@@ -58,18 +67,23 @@ import org.spongepowered.api.service.user.UserStorageService;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.action.TextActions;
 import org.spongepowered.api.text.channel.MessageReceiver;
-import org.spongepowered.api.text.format.TextColors;
 import org.spongepowered.api.text.serializer.TextSerializers;
 import org.spongepowered.api.util.Tristate;
 import org.spongepowered.api.util.blockray.BlockRay;
 import org.spongepowered.api.util.blockray.BlockRayHit;
+import org.spongepowered.api.world.Location;
 import org.spongepowered.api.world.World;
+
 import com.flowpowered.math.vector.Vector3i;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.reflect.TypeToken;
 import com.google.inject.Inject;
 
+
+import static org.spongepowered.api.data.DataQuery.of;
+import net.eterniamc.chestshops.cmds.ChestShopCommand;
+import net.eterniamc.chestshops.cmds.ChestShopGiveCommand;
 import net.minecraft.block.BlockChest;
 import net.minecraft.nbt.CompressedStreamTools;
 import net.minecraft.nbt.NBTBase;
@@ -82,12 +96,12 @@ import ninja.leaping.configurate.hocon.HoconConfigurationLoader;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
 import ninja.leaping.configurate.objectmapping.GuiceObjectMapperFactory;
 
-@Plugin(id = "chestshops", name = "ChestShops", description = "The ultimate chest shop", authors = { "Justin" })
+@Plugin(id = "chestshops", name = "ChestShops", description = "The ultimate chest shop", authors = { "Justin, runescapejon" })
 public class ChestShops {
 
 	private static final File file = new File("./config/chestShops.nbt");
 	private static final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
-	private static Map<Vector3i, ChestShop> shops = Maps.newConcurrentMap();
+	private static Map<Vector3i, Utility> shops = Maps.newConcurrentMap();
 	private Map<UUID, Consumer<Text>> chatGuis = Maps.newHashMap();
 	private EconomyService es;
 	static Object plugin;
@@ -133,7 +147,7 @@ public class ChestShops {
 				NBTTagList list = nbt.getTagList("shops", Constants.NBT.TAG_COMPOUND);
 				for (NBTBase base : list) {
 					try {
-						ChestShop shop = ChestShop.readFromNbt((NBTTagCompound) base);
+						Utility shop = Utility.readFromNbt((NBTTagCompound) base);
 						shops.put(shop.getLocation().getBlockPosition(), shop);
 					} catch (Exception e) {
 					}
@@ -143,16 +157,16 @@ public class ChestShops {
 			}
 		}
 		executor.scheduleAtFixedRate(() -> {
-			Map<Vector3i, ChestShop> copy = Maps.newHashMap(shops);
-			Collection<ChestShop> close = copy.values();
-			Collection<ChestShop> open = Sets.newHashSet();
+			Map<Vector3i, Utility> copy = Maps.newHashMap(shops);
+			Collection<Utility> close = copy.values();
+			Collection<Utility> open = Sets.newHashSet();
 			for (Player player : Sponge.getServer().getOnlinePlayers()) {
 				try {
 					BlockRay<World> ray = BlockRay.from(player).distanceLimit(5).narrowPhase(false).build();
 					while (ray.hasNext()) {
 						BlockRayHit<World> hit = ray.next();
 						if (copy.containsKey(hit.getBlockPosition())) {
-							ChestShop shop = copy.get(hit.getBlockPosition());
+							Utility shop = copy.get(hit.getBlockPosition());
 							if (shop.getLocation().getExtent().getName().equals(player.getWorld().getName())) {
 								close.remove(shop);
 								open.add(shop);
@@ -165,8 +179,8 @@ public class ChestShops {
 				}
 			}
 			Task.builder().execute(() -> {
-				close.forEach(ChestShop::close);
-				open.forEach(ChestShop::open);
+				close.forEach(Utility::close);
+				open.forEach(Utility::open);
 			}).submit(ChestShops.plugin);
 		}, 0L, 250, TimeUnit.MILLISECONDS);
 		Task.builder().interval(5, TimeUnit.MINUTES).execute(this::save).submit(this);
@@ -221,7 +235,7 @@ public class ChestShops {
 						Chest chest = c; // lambdas >:(
 						sendMessage(player, Configuration.PriceMsg);
 						chatGuis.put(player.getUniqueId(), text -> {
-							ChestShop shop = new ChestShop(chest, player.getUniqueId(),
+							Utility shop = new Utility(chest, player.getUniqueId(),
 									Double.parseDouble(text.toPlain().replaceAll("[^0-9.]*", "")));
 							if (player.hasPermission("chestshop.admin")) {
 								sendMessage(player, Text.builder()
@@ -235,7 +249,7 @@ public class ChestShops {
 												TextSerializers.FORMATTING_CODE.deserialize(Configuration.Adminhover))))
 										.build());
 							}
-							ChestShop old = shops.put(chest.getLocation().getBlockPosition(), shop);
+							Utility old = shops.put(chest.getLocation().getBlockPosition(), shop);
 							if (old != null) {
 								old.close();
 								sendMessage(player, Configuration.PutItem);
@@ -247,31 +261,52 @@ public class ChestShops {
 			}
 		}
 	}
+	//This will prevent chestshop dupe once you break it, it drop a chest that doesn't contain lores/or nbt
+	//This will prevent it from doing it instead in BlockEvent will run down another command
+	//This is annoying on sponge api part on how i had to do this I got the idea from @pie-flavor  in one of this plugins named "Plguin"
+	//it's somewhat working but still crap. It's the only thing that i can think of..
 
+	  private List<Location<World>> tracked = new ArrayList<>();
 	@Listener
+	  public void onItemDrop(DropItemEvent.Destruct event, @First BlockSnapshot blockSnapshot) {
+	    Optional<Location<World>> OptionalLocation = blockSnapshot.getLocation();
+	    if (!OptionalLocation.isPresent()) {
+	      return;
+	    }
+
+	    Location<World> location = OptionalLocation.get();
+	    if (!tracked.remove(location)) {
+	      return;
+	    }
+
+	    event.getEntities().clear();
+	  }
+ 
+
+    @Listener
 	public void onChestBreak(ChangeBlockEvent.Break event, @First Player player) {
 		for (Transaction<BlockSnapshot> transaction : event.getTransactions()) {
-			ChestShop shop = shops.get((transaction.getDefault()).getPosition());
+			Utility shop = shops.get((transaction.getDefault()).getPosition());
 			if (shop != null) {
 				if (event.getSource() instanceof Player
 						&& !shop.getOwner().equals(((Player) event.getSource()).getUniqueId())) {
 					event.setCancelled(true);
 				} else {
 					if (shop.getOwner().equals(((Player) event.getSource()).getUniqueId())) {
-						// ItemStack snapshot = shop.getContents().iterator().next();
-						// this line above had an issue where if element next return to nothing the
-						// hologram "empty" is staying. This is how player break an empty chestshop and
-						// yet still active chestshop but without the chest. Below should fix that behavior 
+
 						List<Set<ItemStack>> list = Arrays.asList(shop.getContents());
+
 						Iterator<Set<ItemStack>> iter = list.iterator();
 						while (iter.hasNext()) {
 							Set<ItemStack> snapshot = iter.next();
+
 							if (snapshot.isEmpty()) {
 								shops.remove((transaction.getDefault()).getPosition());
+								tracked.add(transaction.getDefault().getLocation().get());
 								shop.close();
 								return;
 							}
-							//making sure that empty element doesn't return an error..
+							// making sure that empty element doesn't return an error..
 							if (!player.getInventory().canFit(snapshot.iterator().next()) && !snapshot.isEmpty()) {
 								event.setCancelled(true);
 								player.sendMessage((Text.of(
@@ -280,7 +315,9 @@ public class ChestShops {
 							}
 							if (player.getInventory().canFit(snapshot.iterator().next())) {
 								shops.remove((transaction.getDefault()).getPosition());
+								tracked.add(transaction.getDefault().getLocation().get());
 								shop.close();
+
 
 								Sponge.getServer().getPlayer(shop.getOwner()).ifPresent(player1 -> {
 									Sponge.getCommandManager().process((CommandSource) Sponge.getServer().getConsole(),
@@ -295,21 +332,12 @@ public class ChestShops {
 		}
 	}
 
-	// really don't need this...
-	/*
-	 * @Listener public void onPlayerInteractBlock(InteractBlockEvent.Secondary
-	 * event, @First Player player) { if
-	 * (shops.containsKey(event.getTargetBlock().getPosition())) { ChestShop shop =
-	 * shops.get(event.getTargetBlock().getPosition()); if (((World)
-	 * shop.getLocation().getExtent()).getName().equals(player.getWorld().getName())
-	 * ) { event.setUseBlockResult(Tristate.FALSE);
-	 * event.setUseItemResult(Tristate.FALSE); } } }
-	 */
 
 	@Listener(order = Order.PRE)
 	public void prePlayerInteractBlock(InteractBlockEvent.Secondary event, @First Player player) {
-		ChestShop shop = shops.get(event.getTargetBlock().getPosition());
+		Utility shop = shops.get(event.getTargetBlock().getPosition());
 		if (shops.containsKey(event.getTargetBlock().getPosition())) {
+			 Location<World> loc = shop.getLocation();
 
 			if (shop.getLocation().getExtent().getName().equals(player.getWorld().getName())) {
 				event.setUseBlockResult(Tristate.FALSE);
@@ -352,12 +380,13 @@ public class ChestShops {
 							.onClick(TextActions.executeCallback(src -> {
 								if (withdraw(getUser(shop.getOwner()), amount)) {
 									deposit(player, amount);
-									shop.add(held.get());  
+									shop.add(held.get());
 									player.setItemInHand(HandTypes.MAIN_HAND, ItemStack.empty());
 								}
 							})).build());
 				} else if (shop.isAdmin() || shop.sumContents() >= 0) {
-					//>=0 is allowing players to have a set of 1 item in chestshop. Essentially sort of fixing the issue with 1x withdraw disappear
+					// >=0 is allowing players to have a set of 1 item in chestshop. Essentially
+					// sort of fixing the issue with 1x withdraw disappear
 					sendMessage(player, Configuration.buyamount);
 					chatGuis.put(player.getUniqueId(), text -> {
 						int amount = Integer.parseInt(text.toPlain().replaceAll("[^0-9]", ""));
@@ -384,29 +413,29 @@ public class ChestShops {
 											// like if they have clear inventory but trying to purchase something that
 											// is OVER 9000 .-.
 											if (shop.sumContents() >= amount) {
-											ItemStack is = ItemStack.builder().from(stack).quantity(amount).build();
-											if (!player.getInventory().canFit(is)) {
-												player.sendMessage(TextSerializers.FORMATTING_CODE
-														.deserialize(Configuration.purchaseroom));
-												player.playSound(SoundTypes.BLOCK_ANVIL_PLACE,
-														player.getLocation().getPosition(), 1);
-											}
-											if (player.getInventory().canFit(is)) {
-												if (shop.getContents().isEmpty()) {
+												ItemStack is = ItemStack.builder().from(stack).quantity(amount).build();
+												if (!player.getInventory().canFit(is)) {
 													player.sendMessage(TextSerializers.FORMATTING_CODE
-															.deserialize(Configuration.empty));
+															.deserialize(Configuration.purchaseroom));
+													player.playSound(SoundTypes.BLOCK_ANVIL_PLACE,
+															player.getLocation().getPosition(), 1);
 												}
-												if (!shop.getContents().isEmpty()) {
-												 
-											 
-													if (withdraw(player, amount * shop.getPrice())) {
-													 
-														deposit(getUser(shop.getOwner()), amount * shop.getPrice());
-														Set<ItemStack> withdrawn = shop.withdraw(amount);
-														withdrawn.forEach(player.getInventory()::offer);
+												if (player.getInventory().canFit(is)) {
+													if (shop.getContents().isEmpty()) {
+														player.sendMessage(TextSerializers.FORMATTING_CODE
+																.deserialize(Configuration.empty));
 													}
-												 
-												}}
+													if (!shop.getContents().isEmpty()) {
+
+														if (withdraw(player, amount * shop.getPrice())) {
+
+															deposit(getUser(shop.getOwner()), amount * shop.getPrice());
+															Set<ItemStack> withdrawn = shop.withdraw(amount);
+															withdrawn.forEach(player.getInventory()::offer);
+														}
+
+													}
+												}
 											}
 										}
 									})).build());
@@ -414,7 +443,7 @@ public class ChestShops {
 					});
 				}
 			} else if (shop.sumContents() == 1) {
-			 
+
 				player.sendMessage(Text.builder()
 						.append(TextSerializers.FORMATTING_CODE
 								.deserialize(Configuration.cost.replace("%c%", String.valueOf(shop.getPrice()))))
@@ -423,7 +452,7 @@ public class ChestShops {
 								player.sendMessage(TextSerializers.FORMATTING_CODE.deserialize(Configuration.empty));
 							}
 							if (!shop.getContents().isEmpty()) {
-							 
+
 								if (withdraw(player, shop.getPrice())) {
 									deposit(getUser(shop.getOwner()), shop.getPrice());
 									Set<ItemStack> withdrawn = shop.withdraw(1);
@@ -453,7 +482,7 @@ public class ChestShops {
 	@Listener(order = Order.PRE)
 	public void onServerStopping(GameStoppingServerEvent event) {
 		Sponge.getScheduler().getScheduledTasks(this).forEach(Task::cancel);
-		shops.values().forEach(ChestShop::close);
+		shops.values().forEach(Utility::close);
 		save();
 	}
 
