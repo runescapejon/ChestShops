@@ -26,13 +26,10 @@ import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.GenericArguments;
 import org.spongepowered.api.command.spec.CommandSpec;
 import org.spongepowered.api.config.ConfigDir;
-import org.spongepowered.api.data.DataContainer;
-import org.spongepowered.api.data.DataQuery;
 import org.spongepowered.api.data.Transaction;
 import org.spongepowered.api.data.key.Keys;
 import org.spongepowered.api.data.type.HandTypes;
 import org.spongepowered.api.effect.sound.SoundTypes;
-import org.spongepowered.api.entity.Entity;
 import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.entity.living.player.User;
 import org.spongepowered.api.event.Listener;
@@ -41,13 +38,8 @@ import org.spongepowered.api.event.block.ChangeBlockEvent;
 import org.spongepowered.api.event.block.InteractBlockEvent;
 import org.spongepowered.api.event.cause.Cause;
 import org.spongepowered.api.event.cause.EventContext;
-import org.spongepowered.api.event.cause.EventContextKey;
-import org.spongepowered.api.event.cause.EventContextKeys;
-import org.spongepowered.api.event.entity.SpawnEntityEvent;
-import org.spongepowered.api.event.filter.Getter;
 import org.spongepowered.api.event.filter.cause.First;
 import org.spongepowered.api.event.filter.cause.Root;
-import org.spongepowered.api.event.filter.type.Include;
 import org.spongepowered.api.event.game.state.GamePreInitializationEvent;
 import org.spongepowered.api.event.game.state.GameStartedServerEvent;
 import org.spongepowered.api.event.game.state.GameStoppingServerEvent;
@@ -81,7 +73,6 @@ import com.google.common.reflect.TypeToken;
 import com.google.inject.Inject;
 
 
-import static org.spongepowered.api.data.DataQuery.of;
 import net.eterniamc.chestshops.cmds.ChestShopCommand;
 import net.eterniamc.chestshops.cmds.ChestShopGiveCommand;
 import net.minecraft.block.BlockChest;
@@ -337,7 +328,6 @@ public class ChestShops {
 	public void prePlayerInteractBlock(InteractBlockEvent.Secondary event, @First Player player) {
 		Utility shop = shops.get(event.getTargetBlock().getPosition());
 		if (shops.containsKey(event.getTargetBlock().getPosition())) {
-			 Location<World> loc = shop.getLocation();
 
 			if (shop.getLocation().getExtent().getName().equals(player.getWorld().getName())) {
 				event.setUseBlockResult(Tristate.FALSE);
