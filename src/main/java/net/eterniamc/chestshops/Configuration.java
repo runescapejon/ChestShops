@@ -70,8 +70,11 @@ public class Configuration {
 	public static String receivedmsg = "You have received &a$%amt%&ffrom your chest shop";
 
 	@Setting(value = "roommsg")
-	public static String roommsg = "You don't have enough room!";
+	public static String roommsg = "Don't have enough room!";
 
+	@Setting(value = "confirmsent")
+	public static String confirmsent = "You have sent chestshop to %player%";
+	
 	@Setting(value = "purchaseroom")
 	public static String purchaseroom = "&4&lPlease Make room before purchasing!";
 	
