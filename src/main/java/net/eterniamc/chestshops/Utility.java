@@ -1,18 +1,10 @@
 package net.eterniamc.chestshops;
 
-import java.math.BigDecimal;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-import java.util.function.IntBinaryOperator;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
-import org.codehaus.plexus.util.CollectionUtils;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.block.tileentity.carrier.Chest;
 import org.spongepowered.api.data.key.Keys;
@@ -20,6 +12,8 @@ import org.spongepowered.api.entity.Entity;
 import org.spongepowered.api.entity.EntityTypes;
 import org.spongepowered.api.entity.Item;
 import org.spongepowered.api.entity.living.ArmorStand;
+import org.spongepowered.api.entity.living.player.Player;
+import org.spongepowered.api.item.ItemTypes;
 import org.spongepowered.api.item.inventory.ItemStack;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.format.TextColors;
@@ -35,7 +29,6 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.tileentity.TileEntityChest;
 import net.minecraft.util.math.BlockPos;
-import scala.collection.mutable.FlatHashTable.Contents;
 
 public class Utility {
 
@@ -123,6 +116,7 @@ public class Utility {
 					ItemStack snapshot = getContents().iterator().next().copy();
 					snapshot.setQuantity(1);
 					display.offer(Keys.REPRESENTED_ITEM, snapshot.createSnapshot());
+					display.offer(Keys.PERSISTS, true);
 					display.offer(Keys.INFINITE_DESPAWN_DELAY, true);
 					display.offer(Keys.EXPIRATION_TICKS, Integer.MAX_VALUE);
 					display.setVelocity(new Vector3d());
@@ -230,7 +224,6 @@ public class Utility {
 		contents.add(stack);
 	}
 
-	
 	public Set<ItemStack> withdraw(int amount) {
 		Set<ItemStack> set = Sets.newHashSet();
 		if (admin) {
@@ -247,22 +240,22 @@ public class Utility {
 			return set;
 		}
 		for (ItemStack content : contents) {
-		       Iterator<ItemStack> iterator = contents.iterator();
-		        while (iterator.hasNext() && amount > 0) {
-		            ItemStack content1 = iterator.next();
-		            if (content1.getQuantity() > amount) {
-		                ItemStack copy = content1.copy();
-		                copy.setQuantity(amount);
-		                set.add(copy);
-		                content1.setQuantity(content1.getQuantity() - amount);
-		                amount = 0;
-		            } else {
-		                amount -= content1.getQuantity();
-		                set.add(content1.copy());
-		                iterator.remove();
-		            }
-		        }
-				break;
+			Iterator<ItemStack> iterator = contents.iterator();
+			while (iterator.hasNext() && amount > 0) {
+				ItemStack content1 = iterator.next();
+				if (content1.getQuantity() > amount) {
+					ItemStack copy = content1.copy();
+					copy.setQuantity(amount);
+					set.add(copy);
+					content1.setQuantity(content1.getQuantity() - amount);
+					amount = 0;
+				} else {
+					amount -= content1.getQuantity();
+					set.add(content1.copy());
+					iterator.remove();
+				}
+			}
+			break;
 		}
 		if (sumContents() <= 0) {
 			contents.clear();
@@ -270,7 +263,7 @@ public class Utility {
 		update();
 		return set;
 	}
-	
+
 	public Location<World> getLocation() {
 		return location;
 	}
@@ -293,6 +286,20 @@ public class Utility {
 
 	public double getBuyPrice() {
 		return buyPrice;
+	}
+	
+	public static void givechestshop(Player p, int num) {
+		org.spongepowered.api.item.inventory.ItemStack item = org.spongepowered.api.item.inventory.ItemStack
+				.builder().itemType(ItemTypes.CHEST)
+				.add(Keys.DISPLAY_NAME,
+						Text.of(TextSerializers.FORMATTING_CODE.deserialize(Configuration.chestshopitemname)))
+				.add(Keys.ITEM_LORE,
+						Collections.singletonList(
+								TextSerializers.FORMATTING_CODE.deserialize(Configuration.chestshopitemlore)))
+				.build();
+		((net.minecraft.item.ItemStack) (Object) item).getTagCompound().setBoolean("ChestShop", true);
+		ItemStack Itemstack = ItemStack.builder().from(item).quantity(num).build();
+		p.getInventory().offer(Itemstack).getRejectedItems().isEmpty();
 	}
 
 	public void setBuyPrice(double buyPrice) {

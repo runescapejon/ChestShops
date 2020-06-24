@@ -72,7 +72,6 @@ import com.google.common.collect.Sets;
 import com.google.common.reflect.TypeToken;
 import com.google.inject.Inject;
 
-
 import net.eterniamc.chestshops.cmds.ChestShopCommand;
 import net.eterniamc.chestshops.cmds.ChestShopGiveCommand;
 import net.minecraft.block.BlockChest;
@@ -191,6 +190,8 @@ public class ChestShops {
 
 	}
 
+ 
+	
 	@Listener
 	public void onServiceProviderChange(ChangeServiceProviderEvent event) {
 		if (event.getNewProvider() instanceof EconomyService) {
@@ -292,6 +293,7 @@ public class ChestShops {
 							Set<ItemStack> snapshot = iter.next();
 
 							if (snapshot.isEmpty()) {
+								Utility.givechestshop(player, 1);
 								shops.remove((transaction.getDefault()).getPosition());
 								tracked.add(transaction.getDefault().getLocation().get());
 								shop.close();
@@ -311,8 +313,7 @@ public class ChestShops {
 
 
 								Sponge.getServer().getPlayer(shop.getOwner()).ifPresent(player1 -> {
-									Sponge.getCommandManager().process((CommandSource) Sponge.getServer().getConsole(),
-											"chestshopgive " + player1.getName() + " 1");
+									Utility.givechestshop(player, 1);
 									shop.withdraw(shop.sumContents()).forEach(player1.getInventory()::offer);
 								});
 							}
@@ -355,6 +356,7 @@ public class ChestShops {
 						shop.update();
 						player.setItemInHand(HandTypes.MAIN_HAND, remove);
 						sendMessage(player, Configuration.itemremove);
+					
 					} else {
 						sendMessage(player, Configuration.itemempty);
 					}
