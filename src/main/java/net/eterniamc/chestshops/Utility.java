@@ -40,7 +40,7 @@ public class Utility {
 	private ArmorStand title;
 	private ArmorStand description;
 	private ArmorStand description1;
-	public static Location<World> location;
+	private Location<World> location;
 	private double price;
 	private double buyPrice;
 	private boolean admin;
