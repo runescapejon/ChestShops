@@ -1,4 +1,6 @@
 This is how to use the Chestshops it's easy and designed to be user friendly. Simply type /chestshop and place it anywhere. Once you place it mention the price you want your item to be. To set the price, all you have to do is just mention it in the Minecraft chat. After mentioning your price take any item you wish to sell to other players and right click the item onto the Chestshop that you placed, you can store an infinite quantity of items in the Chestshop. There is an Admin feature that allows administration of the server to have a Chestshop with unlimited quantity without having to restore the purchased items. 
+If you need support I'd made a discord for it.
+https://discord.gg/XXgEpq3
 
 | Command | Information | Permission |
 | :---         |     :---:      |          ---: |
