@@ -55,10 +55,12 @@ import org.spongepowered.api.service.economy.EconomyService;
 import org.spongepowered.api.service.economy.account.UniqueAccount;
 import org.spongepowered.api.service.economy.transaction.ResultType;
 import org.spongepowered.api.service.economy.transaction.TransactionResult;
+import org.spongepowered.api.service.pagination.PaginationList;
 import org.spongepowered.api.service.user.UserStorageService;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.action.TextActions;
 import org.spongepowered.api.text.channel.MessageReceiver;
+import org.spongepowered.api.text.format.TextColors;
 import org.spongepowered.api.text.serializer.TextSerializers;
 import org.spongepowered.api.util.Tristate;
 import org.spongepowered.api.util.blockray.BlockRay;
@@ -86,7 +88,8 @@ import ninja.leaping.configurate.hocon.HoconConfigurationLoader;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
 import ninja.leaping.configurate.objectmapping.GuiceObjectMapperFactory;
 
-@Plugin(id = "chestshops", name = "ChestShops", description = "The ultimate chest shop", authors = { "Justin, runescapejon" })
+@Plugin(id = "chestshops", name = "ChestShops", description = "The ultimate chest shop", authors = {
+		"Justin, runescapejon" })
 public class ChestShops {
 
 	private static final File file = new File("./config/chestShops.nbt");
@@ -190,8 +193,6 @@ public class ChestShops {
 
 	}
 
- 
-	
 	@Listener
 	public void onServiceProviderChange(ChangeServiceProviderEvent event) {
 		if (event.getNewProvider() instanceof EconomyService) {
@@ -253,29 +254,33 @@ public class ChestShops {
 			}
 		}
 	}
-	//This will prevent chestshop dupe once you break it, it drop a chest that doesn't contain lores/or nbt
-	//This will prevent it from doing it instead in BlockEvent will run down another command
-	//This is annoying on sponge api part on how i had to do this I got the idea from @pie-flavor  in one of this plugins named "Plguin"
-	//it's somewhat working but still crap. It's the only thing that i can think of..
+	// This will prevent chestshop dupe once you break it, it drop a chest that
+	// doesn't contain lores/or nbt
+	// This will prevent it from doing it instead in BlockEvent will run down
+	// another command
+	// This is annoying on sponge api part on how i had to do this I got the idea
+	// from @pie-flavor in one of this plugins named "Plguin"
+	// it's somewhat working but still crap. It's the only thing that i can think
+	// of..
 
-	  private List<Location<World>> tracked = new ArrayList<>();
+	private List<Location<World>> tracked = new ArrayList<>();
+
 	@Listener
-	  public void onItemDrop(DropItemEvent.Destruct event, @First BlockSnapshot blockSnapshot) {
-	    Optional<Location<World>> OptionalLocation = blockSnapshot.getLocation();
-	    if (!OptionalLocation.isPresent()) {
-	      return;
-	    }
+	public void onItemDrop(DropItemEvent.Destruct event, @First BlockSnapshot blockSnapshot) {
+		Optional<Location<World>> OptionalLocation = blockSnapshot.getLocation();
+		if (!OptionalLocation.isPresent()) {
+			return;
+		}
 
-	    Location<World> location = OptionalLocation.get();
-	    if (!tracked.remove(location)) {
-	      return;
-	    }
+		Location<World> location = OptionalLocation.get();
+		if (!tracked.remove(location)) {
+			return;
+		}
 
-	    event.getEntities().clear();
-	  }
- 
+		event.getEntities().clear();
+	}
 
-    @Listener
+	@Listener
 	public void onChestBreak(ChangeBlockEvent.Break event, @First Player player) {
 		for (Transaction<BlockSnapshot> transaction : event.getTransactions()) {
 			Utility shop = shops.get((transaction.getDefault()).getPosition());
@@ -311,7 +316,6 @@ public class ChestShops {
 								tracked.add(transaction.getDefault().getLocation().get());
 								shop.close();
 
-
 								Sponge.getServer().getPlayer(shop.getOwner()).ifPresent(player1 -> {
 									Utility.givechestshop(player, 1);
 									shop.withdraw(shop.sumContents()).forEach(player1.getInventory()::offer);
@@ -323,7 +327,6 @@ public class ChestShops {
 			}
 		}
 	}
-
 
 	@Listener(order = Order.PRE)
 	public void prePlayerInteractBlock(InteractBlockEvent.Secondary event, @First Player player) {
@@ -356,7 +359,7 @@ public class ChestShops {
 						shop.update();
 						player.setItemInHand(HandTypes.MAIN_HAND, remove);
 						sendMessage(player, Configuration.itemremove);
-					
+
 					} else {
 						sendMessage(player, Configuration.itemempty);
 					}
@@ -366,11 +369,12 @@ public class ChestShops {
 								.orElse(false)) {
 					Optional<ItemStack> held = player.getItemInHand(HandTypes.MAIN_HAND);
 					double amount = shop.getBuyPrice() * held.get().getQuantity();
+					int integer = (int) amount ;
 					player.sendMessage(Text.builder()
 							.append(TextSerializers.FORMATTING_CODE
 									.deserialize(Configuration.confirm.replace("%amount%", String.valueOf(amount))))
 							.onClick(TextActions.executeCallback(src -> {
-								if (withdraw(getUser(shop.getOwner()), amount)) {
+								if (withdraw(getUser(shop.getOwner()), amount, held.get(),  integer)) {
 									deposit(player, amount);
 									shop.add(held.get());
 									player.setItemInHand(HandTypes.MAIN_HAND, ItemStack.empty());
@@ -379,7 +383,36 @@ public class ChestShops {
 				} else if (shop.isAdmin() || shop.sumContents() >= 0) {
 					// >=0 is allowing players to have a set of 1 item in chestshop. Essentially
 					// sort of fixing the issue with 1x withdraw disappear
+					if (!shop.getContents().isEmpty()) {
+						List<Text> contents = new ArrayList<>();
+
+					contents.add(Text.of(TextSerializers.FORMATTING_CODE
+							.deserialize(Configuration.shopowner.replace("%playername%", shop.getOwnerName()))));
+					contents.add(Text
+							.of(TextSerializers.FORMATTING_CODE.deserialize(Configuration.shopitem.replace("%itemname%",
+									shop.getContents().iterator().next().getType().getTranslation().get() ))));
+					contents.add(Text.of(TextSerializers.FORMATTING_CODE.deserialize(Configuration.shopamount.replace(
+							"%amount%",
+							String.valueOf(shop.getContents().stream().mapToInt(ItemStack::getQuantity).sum())))));
+					contents.add(
+							Text.of(TextSerializers.FORMATTING_CODE
+									.deserialize(Configuration.shopprice
+											.replace("%itemname%",
+													shop.getContents().iterator().next().getType().getTranslation()
+															.get())
+											.replace("%price%", String.valueOf(shop.getPrice())))));
+					PaginationList.Builder paginationBuilder = PaginationList.builder()
+							.padding(Text.of(TextSerializers.FORMATTING_CODE.deserialize(Configuration.padding)))
+							.title(Text.of(TextSerializers.FORMATTING_CODE.deserialize(Configuration.shoptitle)))
+							.contents(contents);
+				
+					paginationBuilder.sendTo(player);
 					sendMessage(player, Configuration.buyamount);
+					}
+					if (shop.getContents().isEmpty()) {
+						sendMessage(player, Configuration.itemempty);
+					}
+					
 					chatGuis.put(player.getUniqueId(), text -> {
 						int amount = Integer.parseInt(text.toPlain().replaceAll("[^0-9]", ""));
 						Optional<UniqueAccount> acc = es.getOrCreateAccount(player.getUniqueId());
@@ -419,7 +452,7 @@ public class ChestShops {
 													}
 													if (!shop.getContents().isEmpty()) {
 
-														if (withdraw(player, amount * shop.getPrice())) {
+														if (withdraw(player, amount * shop.getPrice(), is, amount)) {
 
 															deposit(getUser(shop.getOwner()), amount * shop.getPrice());
 															Set<ItemStack> withdrawn = shop.withdraw(amount);
@@ -444,8 +477,8 @@ public class ChestShops {
 								player.sendMessage(TextSerializers.FORMATTING_CODE.deserialize(Configuration.empty));
 							}
 							if (!shop.getContents().isEmpty()) {
-
-								if (withdraw(player, shop.getPrice())) {
+								ItemStack is = shop.getContents().iterator().next();
+								if (withdraw(player, shop.getPrice(), is, 1)) {
 									deposit(getUser(shop.getOwner()), shop.getPrice());
 									Set<ItemStack> withdrawn = shop.withdraw(1);
 									withdrawn.forEach(player.getInventory()::offer);
@@ -517,13 +550,23 @@ public class ChestShops {
 		receiver.sendMessage(Text.join(TextSerializers.FORMATTING_CODE.deserialize(Configuration.sendmessage), text));
 	}
 
-	private boolean withdraw(User user, double amount) {
+	private boolean withdraw(User user, double amount, ItemStack is, int quantity) {
+
 		TransactionResult result = es.getOrCreateAccount(user.getUniqueId())
 				.orElseThrow(() -> new Error("No account found for " + user.getName()))
 				.withdraw(es.getDefaultCurrency(), new BigDecimal(amount), Cause.of(EventContext.empty(), this));
+
+		List<Text> contents = new ArrayList<>();
+		contents.add(Text.of(TextSerializers.FORMATTING_CODE.deserialize(Configuration.sendmsgpayment.replace("%amt%", String.valueOf(amount)).replace("%item%", is.getTranslation().get()).replace("%quantity%", String.valueOf(quantity)))));
+		PaginationList.Builder paginationBuilder = PaginationList.builder()
+					.padding(Text.of(TextSerializers.FORMATTING_CODE.deserialize(Configuration.padding)))
+					.title(Text.of(TextSerializers.FORMATTING_CODE.deserialize(Configuration.purchasetitle))).contents(contents);
 		if (result.getResult() == ResultType.SUCCESS) {
 			user.getPlayer().ifPresent(
-					p -> sendMessage(p, Configuration.sendmsgpayment.replace("%amt%", String.valueOf(amount))));
+					p -> 
+			paginationBuilder.sendTo(p) );
+		//	sendMessage(player, Configuration.buyam);
+				//	sendMessage(p, Configuration.sendmsgpayment.replace("%amt%", String.valueOf(amount)))
 
 			return result.getResult() == ResultType.SUCCESS;
 		} else if (result.getResult() == ResultType.ACCOUNT_NO_FUNDS) {

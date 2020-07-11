@@ -15,6 +15,7 @@ import org.spongepowered.api.entity.living.ArmorStand;
 import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.item.ItemTypes;
 import org.spongepowered.api.item.inventory.ItemStack;
+import org.spongepowered.api.service.user.UserStorageService;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.format.TextColors;
 import org.spongepowered.api.text.serializer.TextSerializers;
@@ -279,6 +280,12 @@ public class Utility {
 	public UUID getOwner() {
 		return owner;
 	}
+	
+	private UserStorageService user = Sponge.getServiceManager().provideUnchecked(UserStorageService.class);;
+	
+	public String getOwnerName() {
+		return user.get(owner).get().getName();
+	}
 
 	public Item getDisplay() {
 		return display;
@@ -287,7 +294,7 @@ public class Utility {
 	public double getBuyPrice() {
 		return buyPrice;
 	}
-	
+
 	public static void givechestshop(Player p, int num) {
 		org.spongepowered.api.item.inventory.ItemStack item = org.spongepowered.api.item.inventory.ItemStack
 				.builder().itemType(ItemTypes.CHEST)

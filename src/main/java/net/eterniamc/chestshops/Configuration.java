@@ -7,7 +7,7 @@ import ninja.leaping.configurate.objectmapping.serialize.ConfigSerializable;
 public class Configuration {
 
 	@Setting(value = "ChestShopItemName")
-	public static String chestshopitemname = "&l&b&lChestShop";
+	public static String chestshopitemname = "&6&lChestShop";
 
 	@Setting(value = "ChestShopItemLore")
 	public static String chestshopitemlore = "&fPlace chest down to create your chest shop";
@@ -40,19 +40,19 @@ public class Configuration {
 	public static String itemempty = "This chest shop is empty!";
 
 	@Setting(value = "confirm")
-	public static String confirm = "&6&lMN-Shops &7&l>&f This will sell for  %amount%, click &aHERE&f to confirm";
+	public static String confirm = "&6&lChestShop &7&l>&f This will sell for  %amount%, click &aHERE&f to confirm";
 
 	@Setting(value = "buyamount")
-	public static String buyamount = "How many of these would you like to buy? (Enter the amount in chat)";
+	public static String buyamount = "&2Enter how many you wish to buy in chat.";
 
 	@Setting(value = "notenoughtitems")
 	public static String notenoughtitems = "Oh No! This chest doesn't have enough items! Contact the plot owner!";
 
 	@Setting(value = "purchase")
-	public static String purchase = "&l&b&lMN-Shop &7&l>&f This costs %c%, click &aHERE&f to purchase";
+	public static String purchase = "&6&lChestShop &7&l>&f This costs %c%, click &aHERE&f to purchase";
 
 	@Setting(value = "cost")
-	public static String cost = "&l&b&lMN-Shop &7&l>&f This costs  %c%, click &aHERE&f to purchase";
+	public static String cost = "&6&lChestShop &7&l>&f This costs  %c%, click &aHERE&f to purchase";
 
 	@Setting(value = "empty")
 	public static String empty = "&c&lUh-Oh! &cThis shop is empty!";
@@ -61,10 +61,10 @@ public class Configuration {
 	public static String notenoughmoney = "&c&lTransaction rejected. You don't have enough funds!";
 
 	@Setting(value = "sendmessage")
-	public static String sendmessage = "&l&b&lMN-Shop &7&l>&f";
+	public static String sendmessage = "&6&lChestShop &7&l>&f";
 
 	@Setting(value = "sendmsgpayment")
-	public static String sendmsgpayment = "You have paid &a$%amt%";
+	public static String sendmsgpayment = "&6%quantity% %item% &3for &a$%amt%";
 
 	@Setting(value = "receivedmsg")
 	public static String receivedmsg = "You have received &a$%amt%&ffrom your chest shop";
@@ -78,6 +78,26 @@ public class Configuration {
 	@Setting(value = "purchaseroom")
 	public static String purchaseroom = "&4&lPlease Make room before purchasing!";
 	
+	@Setting(value = "shopowner")
+	public static String shopowner = "&6Owner:&3 %playername%";
+	
+	@Setting(value = "shopitem")
+	public static String shopitem = "&6Item:&3 %itemname%";	
+	
+	@Setting(value = "shopamount")
+	public static String shopamount = "&6Amount:&3 %amount%";	
+	
+	@Setting(value = "shopprice")
+	public static String shopprice = "&6Price Per &3%itemname% - &a$%price%";	
+	
+	@Setting(value = "shoptitle")
+	public static String shoptitle = "&6Shop Information";
+	
+	@Setting(value = "purchasetitle")
+	public static String purchasetitle = "&aPurchase Successfully!";
+	
+	@Setting(value = "padding", comment = "This here just the padding sort of like the border lines you can customize.")
+	public static String padding = "&b-";
 	
 	@Setting(value = "availableitems")
 	public static String availableitems = "&4&lYou cannot break this Chest, you don't have enough space in your inventory to hold the items.";
