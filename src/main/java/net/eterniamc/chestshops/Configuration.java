@@ -12,6 +12,9 @@ public class Configuration {
 	@Setting(value = "ChestShopItemLore")
 	public static String chestshopitemlore = "&fPlace chest down to create your chest shop";
 
+	@Setting(value = "ChestShopDoNOTputitem")
+	public static String ChestShopDoNOTputitem = "&cPlease do not put items inside of the chestshop. Ask a staff member to learn how to perform a chestshop.";
+	
 	@Setting(value = "PriceMsg")
 	public static String PriceMsg = "&fType a price in chat for the item you want to sell.";
 

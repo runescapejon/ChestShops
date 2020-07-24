@@ -22,7 +22,6 @@ import org.spongepowered.api.Sponge;
 import org.spongepowered.api.block.BlockSnapshot;
 import org.spongepowered.api.block.tileentity.TileEntity;
 import org.spongepowered.api.block.tileentity.carrier.Chest;
-import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.GenericArguments;
 import org.spongepowered.api.command.spec.CommandSpec;
 import org.spongepowered.api.config.ConfigDir;
@@ -40,15 +39,20 @@ import org.spongepowered.api.event.cause.Cause;
 import org.spongepowered.api.event.cause.EventContext;
 import org.spongepowered.api.event.filter.cause.First;
 import org.spongepowered.api.event.filter.cause.Root;
+import org.spongepowered.api.event.game.state.GameInitializationEvent;
 import org.spongepowered.api.event.game.state.GamePreInitializationEvent;
 import org.spongepowered.api.event.game.state.GameStartedServerEvent;
 import org.spongepowered.api.event.game.state.GameStoppingServerEvent;
 import org.spongepowered.api.event.item.inventory.ChangeInventoryEvent;
+import org.spongepowered.api.event.item.inventory.ClickInventoryEvent;
 import org.spongepowered.api.event.item.inventory.DropItemEvent;
 import org.spongepowered.api.event.message.MessageChannelEvent;
 import org.spongepowered.api.event.service.ChangeServiceProviderEvent;
 import org.spongepowered.api.item.ItemTypes;
+import org.spongepowered.api.item.inventory.Inventory;
+import org.spongepowered.api.item.inventory.InventoryArchetypes;
 import org.spongepowered.api.item.inventory.ItemStack;
+import org.spongepowered.api.item.inventory.property.InventoryTitle;
 import org.spongepowered.api.plugin.Plugin;
 import org.spongepowered.api.scheduler.Task;
 import org.spongepowered.api.service.economy.EconomyService;
@@ -60,7 +64,6 @@ import org.spongepowered.api.service.user.UserStorageService;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.action.TextActions;
 import org.spongepowered.api.text.channel.MessageReceiver;
-import org.spongepowered.api.text.format.TextColors;
 import org.spongepowered.api.text.serializer.TextSerializers;
 import org.spongepowered.api.util.Tristate;
 import org.spongepowered.api.util.blockray.BlockRay;
@@ -73,6 +76,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.reflect.TypeToken;
 import com.google.inject.Inject;
+
 
 import net.eterniamc.chestshops.cmds.ChestShopCommand;
 import net.eterniamc.chestshops.cmds.ChestShopGiveCommand;
@@ -97,32 +101,39 @@ public class ChestShops {
 	private static Map<Vector3i, Utility> shops = Maps.newConcurrentMap();
 	private Map<UUID, Consumer<Text>> chatGuis = Maps.newHashMap();
 	private EconomyService es;
-	static Object plugin;
-
+	private	static ChestShops plugin;
+	public   ChestShops instance;
 	private File configDirectory;
 	@SuppressWarnings("unused")
 	private Configuration configoptions;
 	GuiceObjectMapperFactory factory;
+ 
 	@Inject
 	private Logger logger;
 	private ChestShops pl;
-
+ 
 	@Inject
 	public ChestShops(Logger logger, @ConfigDir(sharedRoot = false) File configDir, GuiceObjectMapperFactory factory) {
 		this.logger = logger;
 		this.configDirectory = configDir;
 		this.factory = factory;
+		instance = this;
 	}
 
 	@Listener
 	public void onPreInit(GamePreInitializationEvent event) {
+		plugin = this;
 		pl = this;
 		loadConfig();
 	}
 
 	@Listener
-	public void onServerStart(GameStartedServerEvent event) {
+	public void onGameInitlization(GameInitializationEvent event) {
 		plugin = this;
+	}
+	
+	@Listener
+	public void onServerStart(GameStartedServerEvent event) {
 		pl = this;
 		loadConfig();
 		Optional<EconomyService> econService = Sponge.getServiceManager().provide(EconomyService.class);
@@ -192,7 +203,9 @@ public class ChestShops {
 		Sponge.getCommandManager().register(this, chestshopgive, "chestshopgive", "csgive");
 
 	}
-
+	public static ChestShops getInstance() {
+		return plugin;
+	}
 	@Listener
 	public void onServiceProviderChange(ChangeServiceProviderEvent event) {
 		if (event.getNewProvider() instanceof EconomyService) {
@@ -328,6 +341,22 @@ public class ChestShops {
 		}
 	}
 
+	protected ItemStack items;
+
+	@Listener
+	public void onInventoryClick(ClickInventoryEvent event, @First Player player) {
+		Inventory inv = Inventory.builder().of(InventoryArchetypes.CHEST) 
+			.property(InventoryTitle.PROPERTY_NAME,
+					InventoryTitle.of(TextSerializers.FORMATTING_CODE.deserialize(Configuration.chestshopitemname)))
+			 .build(ChestShops.getInstance());	
+		if (event.getTargetInventory().getName().get().equals(inv.getName().get())) {
+			event.setCancelled(true);
+			player.sendMessage(TextSerializers.FORMATTING_CODE.deserialize(Configuration.ChestShopDoNOTputitem));
+			player.closeInventory();
+		}
+	}
+	
+	
 	@Listener(order = Order.PRE)
 	public void prePlayerInteractBlock(InteractBlockEvent.Secondary event, @First Player player) {
 		Utility shop = shops.get(event.getTargetBlock().getPosition());
@@ -565,9 +594,6 @@ public class ChestShops {
 			user.getPlayer().ifPresent(
 					p -> 
 			paginationBuilder.sendTo(p) );
-		//	sendMessage(player, Configuration.buyam);
-				//	sendMessage(p, Configuration.sendmsgpayment.replace("%amt%", String.valueOf(amount)))
-
 			return result.getResult() == ResultType.SUCCESS;
 		} else if (result.getResult() == ResultType.ACCOUNT_NO_FUNDS) {
 			user.getPlayer().ifPresent(p -> sendMessage(p, Configuration.notenoughmoney));
