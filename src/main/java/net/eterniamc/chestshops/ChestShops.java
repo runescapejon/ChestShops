@@ -77,7 +77,6 @@ import com.google.common.collect.Sets;
 import com.google.common.reflect.TypeToken;
 import com.google.inject.Inject;
 
-
 import net.eterniamc.chestshops.cmds.ChestShopCommand;
 import net.eterniamc.chestshops.cmds.ChestShopGiveCommand;
 import net.minecraft.block.BlockChest;
@@ -241,8 +240,14 @@ public class ChestShops {
 						Chest chest = c; // lambdas >:(
 						sendMessage(player, Configuration.PriceMsg);
 						chatGuis.put(player.getUniqueId(), text -> {
+							if (text.toPlain().replaceAll("[^0-9.]*", "").equals("")) {
+								sendMessage(player, Configuration.NonPrice);
+								return;
+}
+							else   {
 							Utility shop = new Utility(chest, player.getUniqueId(),
 									Double.parseDouble(text.toPlain().replaceAll("[^0-9.]*", "")));
+							
 							if (player.hasPermission("chestshop.admin")) {
 								sendMessage(player, Text.builder()
 										.append(TextSerializers.FORMATTING_CODE.deserialize(Configuration.AdminMsg))
@@ -259,8 +264,8 @@ public class ChestShops {
 							if (old != null) {
 								old.close();
 								sendMessage(player, Configuration.PutItem);
-							}
-						});
+							}}
+							 });
 						return;
 					}
 				}
@@ -445,7 +450,11 @@ public class ChestShops {
 					chatGuis.put(player.getUniqueId(), text -> {
 						int amount = Integer.parseInt(text.toPlain().replaceAll("[^0-9]", ""));
 						Optional<UniqueAccount> acc = es.getOrCreateAccount(player.getUniqueId());
-						if (!shop.isAdmin() && shop.sumContents() < amount) {
+						if (acc.toString().isEmpty()) {
+							sendMessage(player, Configuration.NonPrice);
+							return;
+						}
+ 						if (!shop.isAdmin() && shop.sumContents() < amount) {
 							sendMessage(player, Configuration.notenoughtitems);
 						} else {
 							player.sendMessage(Text.builder()
@@ -454,14 +463,16 @@ public class ChestShops {
 									.onClick(TextActions.executeCallback(src -> {
 										BigDecimal price = new BigDecimal(shop.getPrice());
 										BigDecimal bal = acc.get().getBalance(es.getDefaultCurrency());
+										double dbal = bal.doubleValue();
 										if (bal.compareTo(price) < 0) {
+ 
 											player.sendMessage(TextSerializers.FORMATTING_CODE
 													.deserialize(Configuration.notenoughmoney));
 											player.playSound(SoundTypes.BLOCK_ANVIL_PLACE,
 													player.getLocation().getPosition(), 1);
 											return;
 										}
-										if (bal.compareTo(price) > 0) {
+										if (dbal >= shop.getPrice() * amount) {
 											// this should prevent any other issues like scamming when a player cannot
 											// obtain the item even if the item cannot fit but have the inventory clear
 											// like if they have clear inventory but trying to purchase something that
@@ -480,9 +491,7 @@ public class ChestShops {
 																.deserialize(Configuration.empty));
 													}
 													if (!shop.getContents().isEmpty()) {
-
 														if (withdraw(player, amount * shop.getPrice(), is, amount)) {
-
 															deposit(getUser(shop.getOwner()), amount * shop.getPrice());
 															Set<ItemStack> withdrawn = shop.withdraw(amount);
 															withdrawn.forEach(player.getInventory()::offer);

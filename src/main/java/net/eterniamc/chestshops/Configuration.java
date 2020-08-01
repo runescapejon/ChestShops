@@ -17,6 +17,9 @@ public class Configuration {
 	
 	@Setting(value = "PriceMsg")
 	public static String PriceMsg = "&fType a price in chat for the item you want to sell.";
+	
+	@Setting(value = "NonPrice")
+	public static String NonPrice = "&cThis is not a number, please break and place back the chest to then specify the number!";
 
 	@Setting(value = "AdminMsg")
 	public static String AdminMsg = "You have the ability to make this chest shop an Admin Shop, click &aHERE&f to do so";
