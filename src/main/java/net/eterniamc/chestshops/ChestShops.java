@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -25,6 +26,7 @@ import org.spongepowered.api.block.tileentity.carrier.Chest;
 import org.spongepowered.api.command.args.GenericArguments;
 import org.spongepowered.api.command.spec.CommandSpec;
 import org.spongepowered.api.config.ConfigDir;
+import org.spongepowered.api.data.DataQuery;
 import org.spongepowered.api.data.Transaction;
 import org.spongepowered.api.data.key.Keys;
 import org.spongepowered.api.data.type.HandTypes;
@@ -375,16 +377,17 @@ public class ChestShops {
 					Optional<ItemStack> held = player.getItemInHand(HandTypes.MAIN_HAND);
 					if (held.isPresent() && held.get().getType() != ItemTypes.AIR) {
 						if (stack == null || (stack.getType() == held.get().getType()
-								&& stack.getValues().equals(held.get().getValues()))) {
+								&& stack.getValues().equals(held.get().getValues()) && stack.getValues().equals(held.get().toContainer().get(DataQuery.of("UnsafeDamage")).get()))) {
 							shop.add(held.get());
 							shop.update();
 							player.setItemInHand(HandTypes.MAIN_HAND, ItemStack.empty());
 							sendMessage(player, Configuration.AddedItem);
+							
 						} else {
 							sendMessage(player,
 									Configuration.AnotherMessage.replace("%name%",
 											String.valueOf(stack.get(Keys.DISPLAY_NAME)
-													.orElse(Text.of(stack.getType().getName())).toPlainSingle())));
+													.orElse(Text.of(stack.getType().getTranslation().get())).toPlain())));
 
 						}
 					} else if (!shop.getContents().isEmpty()) {
