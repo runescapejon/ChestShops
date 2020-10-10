@@ -388,7 +388,6 @@ public class ChestShops {
 							int unsafeDamage = Integer.parseInt(stack.toContainer().get(DataQuery.of("UnsafeDamage")).get().toString());
 							int helddmg = Integer.parseInt(held.get().toContainer().get(DataQuery.of("UnsafeDamage")).get().toString());
 								if (unsafeDamage ==helddmg) {
-									System.out.println("blah blah");
 									shop.add(held.get());
 									shop.update();
 									player.setItemInHand(HandTypes.MAIN_HAND, ItemStack.empty());
