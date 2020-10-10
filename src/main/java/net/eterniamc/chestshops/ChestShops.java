@@ -8,7 +8,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -305,10 +304,15 @@ public class ChestShops {
 		for (Transaction<BlockSnapshot> transaction : event.getTransactions()) {
 			Utility shop = shops.get((transaction.getDefault()).getPosition());
 			if (shop != null) {
+				if (player.hasPermission("chestshop.break.others")) {
+					shops.remove((transaction.getDefault()).getPosition());
+					shop.close();
+					return;
+				}
 				if (event.getSource() instanceof Player
 						&& !shop.getOwner().equals(((Player) event.getSource()).getUniqueId())) {
 					event.setCancelled(true);
-				} else {
+				} else {	
 					if (shop.getOwner().equals(((Player) event.getSource()).getUniqueId())) {
 
 						List<Set<ItemStack>> list = Arrays.asList(shop.getContents());
@@ -324,6 +328,7 @@ public class ChestShops {
 								shop.close();
 								return;
 							}
+						
 							// making sure that empty element doesn't return an error..
 							if (!player.getInventory().canFit(snapshot.iterator().next()) && !snapshot.isEmpty()) {
 								event.setCancelled(true);
@@ -374,10 +379,29 @@ public class ChestShops {
 				event.setUseItemResult(Tristate.FALSE);
 				ItemStack stack = shop.getContents().isEmpty() ? null : shop.getContents().iterator().next();
 				if (shop.getOwner().equals(player.getUniqueId())) {
-					Optional<ItemStack> held = player.getItemInHand(HandTypes.MAIN_HAND);
+					 Optional<ItemStack>  held = player.getItemInHand(HandTypes.MAIN_HAND);
 					if (held.isPresent() && held.get().getType() != ItemTypes.AIR) {
 						if (stack == null || (stack.getType() == held.get().getType()
-								&& stack.getValues().equals(held.get().getValues()) && stack.getValues().equals(held.get().toContainer().get(DataQuery.of("UnsafeDamage")).get()))) {
+								&& stack.getValues().equals(held.get().getValues()))) {
+							//when stack is not null but when is holding an item within shop content. It now properly check the damage values and see if there a difference. If it's equal it let you add it to the shop.
+							if (stack != null) {
+							int unsafeDamage = Integer.parseInt(stack.toContainer().get(DataQuery.of("UnsafeDamage")).get().toString());
+							int helddmg = Integer.parseInt(held.get().toContainer().get(DataQuery.of("UnsafeDamage")).get().toString());
+								if (unsafeDamage ==helddmg) {
+									System.out.println("blah blah");
+									shop.add(held.get());
+									shop.update();
+									player.setItemInHand(HandTypes.MAIN_HAND, ItemStack.empty());
+									sendMessage(player, Configuration.AddedItem);
+									return;
+								} else if ( unsafeDamage !=helddmg) {
+									sendMessage(player,
+											Configuration.AnotherMessage.replace("%name%",
+													String.valueOf(stack.get(Keys.DISPLAY_NAME)
+															.orElse(Text.of(stack.getType().getTranslation().get())).toPlain())));
+									return;
+								}
+						}
 							shop.add(held.get());
 							shop.update();
 							player.setItemInHand(HandTypes.MAIN_HAND, ItemStack.empty());
