@@ -7,6 +7,7 @@ https://discord.gg/XXgEpq3
 | /chestshop (quantity)  | Allow you to give yourself a Chestshop with the optional quantity.     | chestshop.command    |
 | /chestshopgive (quantity)   | Give the amount you want to another player   | chestshop.give      |
 | n/a   | Give the ability to perform Admin Chestshops   | chestshop.admin
+| n/a   | Give users the ability to break anyone chestshop   | chestshop.break.others
 
 ## Support this plugin?
 I don't acccept any donations but thank you for considering it. All my developments are free open sources. If you enjoy this project please consider hitting that star on this github page that all i ask. This tell me that there are users who are enjoying and utilizing it thank you.
