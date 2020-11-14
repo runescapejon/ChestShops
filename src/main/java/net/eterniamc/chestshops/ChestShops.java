@@ -237,7 +237,7 @@ public class ChestShops {
 					return;
 				}
 				if (na.getTagCompound() != null && na.getTagCompound().hasKey("ChestShop")) {
-					if (!Utility.canChestShopBeHere(location)) {
+					if (!canChestShopBeHere(location)) {
 						sendMessage(player, Configuration.chestShopCantGoHere);
 						event.setCancelled(true);
 						return;
@@ -264,7 +264,9 @@ public class ChestShops {
 						 */
 						sendMessage(player, Configuration.PriceMsg);
 						chatGuis.put(player.getUniqueId(), text -> {
-							if (text.toPlain().replaceAll("[^0-9.]*", "").equals("")) {
+							if (!chestTracking.contains(location)) {
+								sendMessage(player, Configuration.chestDoesNotExist);
+							} else if (text.toPlain().replaceAll("[^0-9.]*", "").equals("")) {
 								sendMessage(player, Configuration.NonPrice);
 							} else {
 								chestTracking.remove(location);
@@ -288,7 +290,6 @@ public class ChestShops {
 								}
 							}
 						});
-						return;
 					}
 				}
 			}
@@ -657,6 +658,11 @@ public class ChestShops {
 				!chestTracking.contains(location.add(-1, 0, 0)) &&
 				!chestTracking.contains(location.add(0, 0, 1)) &&
 				!chestTracking.contains(location.add(0, 0, -1));
+	}
+	public static boolean canChestShopBeHere(Location<World> location) {
+		return !location.add(1, 0, 0).getBlockType().equals(BlockTypes.CHEST) && !location.add(-1, 0, 0).getBlockType().equals(BlockTypes.CHEST) &&
+				!location.add(0, 0, 1).getBlockType().equals(BlockTypes.CHEST) && !location.add(0, 0, -1).getBlockType().equals(BlockTypes.CHEST) &&
+				location.add(0, 1, 0).getBlockType().equals(BlockTypes.AIR);
 	}
 
 	private boolean withdraw(User user, double amount, ItemStack is, int quantity) {

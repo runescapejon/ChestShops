@@ -69,11 +69,7 @@ public class Utility {
 		return shop;
 	}
 
-	public static boolean canChestShopBeHere(Location<World> location) {
-		return !location.add(1, 0, 0).getBlockType().equals(BlockTypes.CHEST) && !location.add(-1, 0, 0).getBlockType().equals(BlockTypes.CHEST) &&
-			   !location.add(0, 0, 1).getBlockType().equals(BlockTypes.CHEST) && !location.add(0, 0, -1).getBlockType().equals(BlockTypes.CHEST) &&
-			   location.add(0, 1, 0).getBlockType().equals(BlockTypes.AIR);
-	}
+
 
 	public NBTTagCompound writeToNbt() {
 		NBTTagCompound nbt = new NBTTagCompound();

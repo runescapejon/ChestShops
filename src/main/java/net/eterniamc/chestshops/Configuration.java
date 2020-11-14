@@ -16,6 +16,9 @@ public class Configuration {
 	public static String chestShopDoNotPlaceBlockOnTop = "&cYou cannot place a block on top of a Chest Shop!";
 
 	@Setting
+	public static String chestDoesNotExist = "&cThis ChestShop no longer exists!";
+
+	@Setting
 	public static String chestDoNotDoubleChest = "&cYou cannot place a chest here!";
 
 	@Setting
