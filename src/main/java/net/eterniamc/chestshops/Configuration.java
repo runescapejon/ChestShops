@@ -12,6 +12,21 @@ public class Configuration {
 	@Setting(value = "ChestShopItemLore")
 	public static String chestshopitemlore = "&fPlace chest down to create your chest shop";
 
+	@Setting
+	public static String chestShopDoNotPlaceBlockOnTop = "&cYou cannot place a block on top of a Chest Shop!";
+
+	@Setting
+	public static String chestDoNotDoubleChest = "&cYou cannot place a chest here!";
+
+	@Setting
+	public static String chestShopCantGoHere = "&cI'm sorry, you cannot place a ChestShop here";
+
+	@Setting
+	public static String droppedChestInventoryFull = "&cYou inventory is full! I've dropped the chest on the floor";
+
+	@Setting
+	public static String droppedRestOfItemsOnFloor = "&cYour inventory is full! I've dropped the rest of the items on the floor";
+
 	@Setting(value = "ChestShopDoNOTputitem")
 	public static String ChestShopDoNOTputitem = "&cPlease do not put items inside of the chestshop. Ask a staff member to learn how to perform a chestshop.";
 	
