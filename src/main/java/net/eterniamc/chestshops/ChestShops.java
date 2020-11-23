@@ -4,9 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -15,11 +13,13 @@ import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 import org.slf4j.Logger;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.block.BlockSnapshot;
+import org.spongepowered.api.block.BlockTypes;
 import org.spongepowered.api.block.tileentity.TileEntity;
 import org.spongepowered.api.block.tileentity.carrier.Chest;
 import org.spongepowered.api.command.args.GenericArguments;
@@ -30,6 +30,8 @@ import org.spongepowered.api.data.Transaction;
 import org.spongepowered.api.data.key.Keys;
 import org.spongepowered.api.data.type.HandTypes;
 import org.spongepowered.api.effect.sound.SoundTypes;
+import org.spongepowered.api.entity.Entity;
+import org.spongepowered.api.entity.EntityTypes;
 import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.entity.living.player.User;
 import org.spongepowered.api.event.Listener;
@@ -54,6 +56,7 @@ import org.spongepowered.api.item.inventory.Inventory;
 import org.spongepowered.api.item.inventory.InventoryArchetypes;
 import org.spongepowered.api.item.inventory.ItemStack;
 import org.spongepowered.api.item.inventory.property.InventoryTitle;
+import org.spongepowered.api.item.inventory.transaction.InventoryTransactionResult;
 import org.spongepowered.api.plugin.Plugin;
 import org.spongepowered.api.scheduler.Task;
 import org.spongepowered.api.service.economy.EconomyService;
@@ -78,9 +81,7 @@ import com.google.common.collect.Sets;
 import com.google.common.reflect.TypeToken;
 import com.google.inject.Inject;
 
-import net.eterniamc.chestshops.cmds.ChestShopCommand;
 import net.eterniamc.chestshops.cmds.ChestShopGiveCommand;
-import net.minecraft.block.BlockChest;
 import net.minecraft.nbt.CompressedStreamTools;
 import net.minecraft.nbt.NBTBase;
 import net.minecraft.nbt.NBTTagCompound;
@@ -107,6 +108,7 @@ public class ChestShops {
 	@SuppressWarnings("unused")
 	private Configuration configoptions;
 	GuiceObjectMapperFactory factory;
+	public List<Location<World>> chestTracking = new ArrayList<>();
  
 	@Inject
 	private Logger logger;
@@ -153,7 +155,7 @@ public class ChestShops {
 					try {
 						Utility shop = Utility.readFromNbt((NBTTagCompound) base);
 						shops.put(shop.getLocation().getBlockPosition(), shop);
-					} catch (Exception e) {
+					} catch (Exception ignored) {
 					}
 				}
 			} catch (IOException e) {
@@ -189,11 +191,11 @@ public class ChestShops {
 		}, 0L, 250, TimeUnit.MILLISECONDS);
 		Task.builder().interval(5, TimeUnit.MINUTES).execute(this::save).submit(this);
 
-		CommandSpec chestshop = CommandSpec.builder()
-				.description(Text.of("Allow you to give yourself a chestshop with the quantity"))
-				.arguments(GenericArguments.optional(GenericArguments.integer(Text.of("quantity"))))
-				.permission("chestshop.command").executor(new ChestShopCommand()).build();
-		Sponge.getCommandManager().register(this, chestshop, "chestshop");
+//		CommandSpec chestshop = CommandSpec.builder()
+//				.description(Text.of("Allow you to give yourself a chestshop with the quantity"))
+//				.arguments(GenericArguments.optional(GenericArguments.integer(Text.of("quantity"))))
+//				.permission("chestshop.command").executor(new ChestShopCommand()).build();
+//		Sponge.getCommandManager().register(this, chestshop, "chestshop");
 
 		CommandSpec chestshopgive = CommandSpec.builder()
 				.description(Text.of("Give the amount you want ot another player"))
@@ -213,15 +215,37 @@ public class ChestShops {
 		}
 	}
 
+
+
 	@Listener
 	public void onChestPlaced(ChangeBlockEvent.Place event, @First Player player) {
 		for (Transaction<BlockSnapshot> transaction : event.getTransactions()) {
-			if (transaction.getDefault().getState().getType() instanceof BlockChest) {
+			Location<World> location = transaction.getFinal().getLocation().get();
+			if (location.add(0, -1 ,0).getBlockType().equals(BlockTypes.CHEST) && shops.containsKey(location.add(0, -1 ,0).getBlockPosition()) && !(transaction.getFinal().getState().getType().equals(BlockTypes.WALL_SIGN) || transaction.getFinal().getState().getType().equals(BlockTypes.STANDING_SIGN))) {
+				sendMessage(player, Configuration.chestShopDoNotPlaceBlockOnTop);
+				event.setCancelled(true);
+				return;
+			}
+
+
+			if (transaction.getDefault().getState().getType().equals(BlockTypes.CHEST)) {
 				net.minecraft.item.ItemStack na = (net.minecraft.item.ItemStack) (Object) player
 						.getItemInHand(HandTypes.MAIN_HAND).get();
+				if (!canChestBeHere(location)) {
+					sendMessage(player, Configuration.chestDoNotDoubleChest);
+					event.setCancelled(true);
+					return;
+				}
 				if (na.getTagCompound() != null && na.getTagCompound().hasKey("ChestShop")) {
+					if (!canChestShopBeHere(location)) {
+						sendMessage(player, Configuration.chestShopCantGoHere);
+						event.setCancelled(true);
+						return;
+					}
 					Optional<TileEntity> tile = player.getWorld().getTileEntity(transaction.getDefault().getPosition());
+					// I'm not sure why this is here, but I'll leave it there, just in case ig
 					if (tile.isPresent() && tile.get() instanceof Chest) {
+						chestTracking.add(location);
 						Chest c = (Chest) tile.get();
 						// I figure without having some weird crash that players can have
 						// a double chest to store items and to sell on another side of the chest or
@@ -238,36 +262,34 @@ public class ChestShops {
 						 * player.getWorld().getTileEntity(transaction.getDefault().getPosition()); c =
 						 * (Chest) tile.get(); }
 						 */
-						Chest chest = c; // lambdas >:(
 						sendMessage(player, Configuration.PriceMsg);
 						chatGuis.put(player.getUniqueId(), text -> {
-							if (text.toPlain().replaceAll("[^0-9.]*", "").equals("")) {
+							if (!chestTracking.contains(location)) {
+								sendMessage(player, Configuration.chestDoesNotExist);
+							} else if (text.toPlain().replaceAll("[^0-9.]*", "").equals("")) {
 								sendMessage(player, Configuration.NonPrice);
-								return;
-}
-							else   {
-							Utility shop = new Utility(chest, player.getUniqueId(),
-									Double.parseDouble(text.toPlain().replaceAll("[^0-9.]*", "")));
-							
-							if (player.hasPermission("chestshop.admin")) {
-								sendMessage(player, Text.builder()
-										.append(TextSerializers.FORMATTING_CODE.deserialize(Configuration.AdminMsg))
-										.onClick(TextActions.executeCallback(src -> {
-											shop.setAdmin(true);
-											sendMessage(src, Configuration.AdminShopUpdated);
-											return;
-										}))
-										.onHover(TextActions.showText(Text.of(
-												TextSerializers.FORMATTING_CODE.deserialize(Configuration.Adminhover))))
-										.build());
+							} else {
+								chestTracking.remove(location);
+								Utility shop = new Utility(c, player.getUniqueId(),
+										Double.parseDouble(text.toPlain().replaceAll("[^0-9.]*", "")));
+								if (player.hasPermission("chestshop.admin")) {
+									sendMessage(player, Text.builder()
+											.append(TextSerializers.FORMATTING_CODE.deserialize(Configuration.AdminMsg))
+											.onClick(TextActions.executeCallback(src -> {
+												shop.setAdmin(true);
+												sendMessage(src, Configuration.AdminShopUpdated);
+											}))
+											.onHover(TextActions.showText(Text.of(
+													TextSerializers.FORMATTING_CODE.deserialize(Configuration.Adminhover))))
+											.build());
+								}
+								Utility old = shops.put(c.getLocation().getBlockPosition(), shop);
+								if (old != null) {
+									old.close();
+									sendMessage(player, Configuration.PutItem);
+								}
 							}
-							Utility old = shops.put(chest.getLocation().getBlockPosition(), shop);
-							if (old != null) {
-								old.close();
-								sendMessage(player, Configuration.PutItem);
-							}}
-							 });
-						return;
+						});
 					}
 				}
 			}
@@ -302,52 +324,65 @@ public class ChestShops {
 	@Listener
 	public void onChestBreak(ChangeBlockEvent.Break event, @First Player player) {
 		for (Transaction<BlockSnapshot> transaction : event.getTransactions()) {
+			if (chestTracking.contains(transaction.getDefault().getLocation().get())) {
+				Utility.givechestshop(player, 1);
+				chestTracking.remove(transaction.getDefault().getLocation().get());
+				tracked.add(transaction.getDefault().getLocation().get());
+				return;
+
+			}
 			Utility shop = shops.get((transaction.getDefault()).getPosition());
 			if (shop != null) {
-				if (player.hasPermission("chestshop.break.others")) {
-					shops.remove((transaction.getDefault()).getPosition());
-					shop.close();
-					return;
-				}
 				if (event.getSource() instanceof Player
-						&& !shop.getOwner().equals(((Player) event.getSource()).getUniqueId())) {
+						&& !shop.getOwner().equals(((Player) event.getSource()).getUniqueId()) && !player.hasPermission("chestshop.break.others")) {
 					event.setCancelled(true);
-				} else {	
-					if (shop.getOwner().equals(((Player) event.getSource()).getUniqueId())) {
-
-						List<Set<ItemStack>> list = Arrays.asList(shop.getContents());
-
-						Iterator<Set<ItemStack>> iter = list.iterator();
-						while (iter.hasNext()) {
-							Set<ItemStack> snapshot = iter.next();
-
-							if (snapshot.isEmpty()) {
-								Utility.givechestshop(player, 1);
-								shops.remove((transaction.getDefault()).getPosition());
-								tracked.add(transaction.getDefault().getLocation().get());
-								shop.close();
-								return;
-							}
-						
-							// making sure that empty element doesn't return an error..
-							if (!player.getInventory().canFit(snapshot.iterator().next()) && !snapshot.isEmpty()) {
-								event.setCancelled(true);
-								player.sendMessage((Text.of(
-										TextSerializers.FORMATTING_CODE.deserialize(Configuration.availableitems))));
-								player.playSound(SoundTypes.BLOCK_ANVIL_PLACE, player.getLocation().getPosition(), 1);
-							}
-							if (player.getInventory().canFit(snapshot.iterator().next())) {
-								shops.remove((transaction.getDefault()).getPosition());
-								tracked.add(transaction.getDefault().getLocation().get());
-								shop.close();
-
-								Sponge.getServer().getPlayer(shop.getOwner()).ifPresent(player1 -> {
-									Utility.givechestshop(player, 1);
-									shop.withdraw(shop.sumContents()).forEach(player1.getInventory()::offer);
-								});
-							}
+				} else {
+					shops.remove((transaction.getDefault()).getPosition());
+					tracked.add(transaction.getDefault().getLocation().get());
+					shop.close();
+					Set<ItemStack> set = shop.getContents();
+					Utility.givechestshop(player, 1);
+					AtomicBoolean doAnnounce = new AtomicBoolean(false);
+					set.forEach(itemStack -> {
+						if (!player.getInventory().offer(itemStack).getType().equals(InventoryTransactionResult.Type.SUCCESS)) {
+							Entity entity = player.getWorld().createEntity(EntityTypes.ITEM, player.getLocation().getPosition());
+							entity.offer(Keys.REPRESENTED_ITEM, itemStack.createSnapshot());
+							player.getWorld().spawnEntity(entity);
+							doAnnounce.set(true);
 						}
+					});
+					if (doAnnounce.get()) {
+						sendMessage(player, Configuration.droppedRestOfItemsOnFloor);
 					}
+
+//					for (Set<ItemStack> snapshot : list) {
+// 						This cannot happen as the loop just wouldn't start if the set was empty
+//						if (snapshot.isEmpty()) {
+//							Utility.givechestshop(player, 1);
+//							shops.remove((transaction.getDefault()).getPosition());
+//							tracked.add(transaction.getDefault().getLocation().get());
+//							shop.close();
+//							return;
+//						}
+
+						// making sure that empty element doesn't return an error..
+//						if (!player.getInventory().canFit(snapshot.iterator().next())) {
+//							event.setCancelled(true);
+//							player.sendMessage((Text.of(
+//									TextSerializers.FORMATTING_CODE.deserialize(Configuration.availableitems))));
+//							player.playSound(SoundTypes.BLOCK_ANVIL_PLACE, player.getLocation().getPosition(), 1);
+//						}
+//						if (player.getInventory().canFit(snapshot.iterator().next())) {
+//							shops.remove((transaction.getDefault()).getPosition());
+//							tracked.add(transaction.getDefault().getLocation().get());
+//							shop.close();
+//
+//							Sponge.getServer().getPlayer(shop.getOwner()).ifPresent(player1 -> {
+//
+//								shop.withdraw(shop.sumContents()).forEach(player1.getInventory()::offer);
+//							});
+//						}
+//					}
 				}
 			}
 		}
@@ -606,12 +641,28 @@ public class ChestShops {
 		}
 	}
 
-	private void sendMessage(MessageReceiver receiver, String text) {
+	public void sendMessage(MessageReceiver receiver, String text) {
 		sendMessage(receiver, TextSerializers.FORMATTING_CODE.deserialize(text));
 	}
 
-	private void sendMessage(MessageReceiver receiver, Text text) {
+	public void sendMessage(MessageReceiver receiver, Text text) {
 		receiver.sendMessage(Text.join(TextSerializers.FORMATTING_CODE.deserialize(Configuration.sendmessage), text));
+	}
+
+	public boolean canChestBeHere(Location<World> location) {
+		return !shops.containsKey(location.add(1, 0, 0).getBlockPosition()) &&
+				!shops.containsKey(location.add(-1, 0, 0).getBlockPosition()) &&
+				!shops.containsKey(location.add(0, 0, 1).getBlockPosition()) &&
+				!shops.containsKey(location.add(0, 0, -1).getBlockPosition()) &&
+				!chestTracking.contains(location.add(1, 0, 0)) &&
+				!chestTracking.contains(location.add(-1, 0, 0)) &&
+				!chestTracking.contains(location.add(0, 0, 1)) &&
+				!chestTracking.contains(location.add(0, 0, -1));
+	}
+	public static boolean canChestShopBeHere(Location<World> location) {
+		return !location.add(1, 0, 0).getBlockType().equals(BlockTypes.CHEST) && !location.add(-1, 0, 0).getBlockType().equals(BlockTypes.CHEST) &&
+				!location.add(0, 0, 1).getBlockType().equals(BlockTypes.CHEST) && !location.add(0, 0, -1).getBlockType().equals(BlockTypes.CHEST) &&
+				location.add(0, 1, 0).getBlockType().equals(BlockTypes.AIR);
 	}
 
 	private boolean withdraw(User user, double amount, ItemStack is, int quantity) {

@@ -6,6 +6,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import org.spongepowered.api.Sponge;
+import org.spongepowered.api.block.BlockTypes;
 import org.spongepowered.api.block.tileentity.carrier.Chest;
 import org.spongepowered.api.data.key.Keys;
 import org.spongepowered.api.entity.Entity;
@@ -67,6 +68,8 @@ public class Utility {
 		shop.setAdmin(nbt.hasKey("admin") && nbt.getBoolean("admin"));
 		return shop;
 	}
+
+
 
 	public NBTTagCompound writeToNbt() {
 		NBTTagCompound nbt = new NBTTagCompound();
@@ -306,7 +309,13 @@ public class Utility {
 				.build();
 		((net.minecraft.item.ItemStack) (Object) item).getTagCompound().setBoolean("ChestShop", true);
 		ItemStack Itemstack = ItemStack.builder().from(item).quantity(num).build();
-		p.getInventory().offer(Itemstack).getRejectedItems().isEmpty();
+		p.getInventory().offer(Itemstack).getRejectedItems().forEach(stack -> {
+			ChestShops.getInstance().sendMessage(p, Configuration.droppedChestInventoryFull);
+			Entity entity = p.getWorld().createEntity(EntityTypes.ITEM, p.getLocation().getPosition());
+			entity.offer(Keys.REPRESENTED_ITEM, stack);
+			p.getWorld().spawnEntity(entity);
+		});
+
 	}
 
 	public void setBuyPrice(double buyPrice) {
